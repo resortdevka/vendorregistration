@@ -78,6 +78,8 @@ class VendorDatabase {
             (err) => {
               // Gracefully handle if collection or database is still being configured
               console.warn("Firestore real-time sync notice:", err.message);
+              // Reset flag so next retry can re-attach
+              this.firestoreListenerAttached = false;
             }
           );
         } catch (e) {
@@ -91,11 +93,18 @@ class VendorDatabase {
     } else {
       window.addEventListener("DOMContentLoaded", tryConnect);
     }
+    // Listen for Firebase ready event fired by devka-config.js after async init + auth
+    window.addEventListener("devka_firebase_ready", () => {
+      // Wait a moment for anonymous auth to settle then connect
+      setTimeout(tryConnect, 600);
+    });
     // Re-check periodically in case scripts load asynchronously
     setTimeout(tryConnect, 1500);
-    setTimeout(tryConnect, 4000);
+    setTimeout(tryConnect, 3500);
+    setTimeout(tryConnect, 6000);
     // Try any pending uploads later
     setTimeout(() => this.processSyncQueue && this.processSyncQueue(), 2500);
+    setTimeout(() => this.processSyncQueue && this.processSyncQueue(), 7000);
   }
 
   async enqueueFailedSync(vendorId, payload) {
