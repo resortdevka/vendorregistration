@@ -38,6 +38,8 @@
   let firestoreDb = null;
   let firebaseAuth = null;
   let isFirebaseReady = false;
+  let initAttempts = 0;
+  let anonymousSignInDone = false;
 
   // Initialize Firebase Client
   function initFirebase() {
@@ -45,38 +47,103 @@
     if (!fb) {
       return false;
     }
-    if (!firebaseApp) {
-      try {
-        if (!fb.apps || fb.apps.length === 0) {
-          firebaseApp = fb.initializeApp(FIREBASE_CONFIG);
-        } else {
-          firebaseApp = fb.app();
-        }
-        if (typeof fb.auth === "function") {
-          firebaseAuth = fb.auth();
-        }
-        if (typeof fb.firestore === "function") {
-          firestoreDb = fb.firestore();
-        }
-        if (!firebaseAuth) console.warn("DevkaCloud: Firebase Auth not detected (unauthenticated writes may be blocked by rules).");
-        if (!firestoreDb) console.warn("DevkaCloud: Firestore service not detected in SDK.");
-        isFirebaseReady = true;
-        console.log("DevkaCloud: Firebase services connected.");
-      } catch (err) {
-        console.warn("DevkaCloud: Firebase initialization notice:", err.message);
+    if (isFirebaseReady && firestoreDb && firebaseAuth) {
+      return true;
+    }
+    initAttempts++;
+    try {
+      if (!fb.apps || fb.apps.length === 0) {
+        firebaseApp = fb.initializeApp(FIREBASE_CONFIG);
+      } else {
+        firebaseApp = fb.app();
       }
+
+      if (typeof fb.auth === "function" && !firebaseAuth) {
+        firebaseAuth = fb.auth();
+      }
+
+      if (typeof fb.firestore === "function" && !firestoreDb) {
+        firestoreDb = fb.firestore();
+        // Critical: use long polling for cross-domain Vercel deployments
+        // This prevents WebChannel transport issues across different hostnames
+        try {
+          firestoreDb.settings({
+            experimentalForceLongPolling: true,
+            merge: true
+          });
+        } catch (settingsErr) {
+          // Settings may already be applied — safe to ignore
+        }
+      }
+
+      if (!firebaseAuth) console.warn("DevkaCloud: Firebase Auth not detected.");
+      if (!firestoreDb) console.warn("DevkaCloud: Firestore service not detected in SDK.");
+
+      isFirebaseReady = !!(firebaseAuth && firestoreDb);
+
+      if (isFirebaseReady) {
+        console.log("DevkaCloud: Firebase services connected (attempt " + initAttempts + ").");
+        // Sign in anonymously on the public portal so Firestore rules allow writes
+        // The admin portal will sign in with real credentials via adminSignIn()
+        _tryAnonymousSignIn();
+        // Dispatch event so VendorDB can attach its real-time listener
+        window.dispatchEvent(new CustomEvent("devka_firebase_ready"));
+      }
+    } catch (err) {
+      console.warn("DevkaCloud: Firebase initialization notice:", err.message);
     }
     return isFirebaseReady;
   }
 
-  // Auto-init when Firebase is present
-  if (typeof window !== "undefined") {
-    if (typeof window.firebase !== "undefined") {
-      initFirebase();
-    } else if (typeof window.addEventListener === "function") {
-      window.addEventListener("DOMContentLoaded", initFirebase);
+  // Anonymous sign-in for public portal so writes are authenticated
+  function _tryAnonymousSignIn() {
+    if (anonymousSignInDone || !firebaseAuth) return;
+    firebaseAuth.onAuthStateChanged((user) => {
+      if (!user) {
+        // Sign in anonymously so Firestore rules (require auth) allow public writes
+        firebaseAuth.signInAnonymously().then(() => {
+          anonymousSignInDone = true;
+          console.log("DevkaCloud: Anonymous auth established for public portal writes.");
+          // Retry any pending sync queue after auth
+          if (window.VendorDB && window.VendorDB.processSyncQueue) {
+            setTimeout(() => window.VendorDB.processSyncQueue(), 500);
+          }
+        }).catch((err) => {
+          // Anonymous auth disabled — Firestore rules must allow unauthenticated writes
+          console.warn("DevkaCloud: Anonymous auth not available:", err.message, "— Firestore rules must allow unauthenticated writes.");
+        });
+      } else {
+        anonymousSignInDone = true;
+        console.log("DevkaCloud: Auth user ready:", user.isAnonymous ? "anonymous" : user.email);
+        if (window.VendorDB && window.VendorDB.processSyncQueue) {
+          setTimeout(() => window.VendorDB.processSyncQueue(), 500);
+        }
+      }
+    });
+  }
+
+  // Auto-init with multiple retry attempts to handle async script loading
+  function _scheduleInit() {
+    if (typeof window !== "undefined") {
+      if (typeof window.firebase !== "undefined") {
+        initFirebase();
+      }
+      // Retry on DOMContentLoaded
+      window.addEventListener("DOMContentLoaded", () => {
+        if (!isFirebaseReady) initFirebase();
+      });
+      // Retry after scripts fully load
+      window.addEventListener("load", () => {
+        if (!isFirebaseReady) initFirebase();
+      });
+      // Staggered retries for async CDN script loads
+      setTimeout(() => { if (!isFirebaseReady) initFirebase(); }, 300);
+      setTimeout(() => { if (!isFirebaseReady) initFirebase(); }, 800);
+      setTimeout(() => { if (!isFirebaseReady) initFirebase(); }, 2000);
+      setTimeout(() => { if (!isFirebaseReady) initFirebase(); }, 4000);
     }
   }
+  _scheduleInit();
 
   /**
    * Upload file to Supabase Cloud Storage
@@ -168,7 +235,23 @@
    * Validates username/email and password with Firebase Auth
    */
   async function adminSignIn(usernameOrEmail, password) {
-    initFirebase();
+    // Ensure Firebase is initialized before trying to sign in
+    if (!isFirebaseReady) initFirebase();
+
+    // Wait up to 5 seconds for Firebase to become ready
+    if (!firebaseAuth) {
+      await new Promise((resolve) => {
+        let waited = 0;
+        const check = setInterval(() => {
+          waited += 100;
+          if (firebaseAuth || waited >= 5000) {
+            clearInterval(check);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+
     if (!firebaseAuth) {
       throw new Error("Firebase Authentication service is currently loading. Please retry in a moment.");
     }
@@ -202,7 +285,7 @@
    * Firebase Admin Sign Out
    */
   async function adminSignOut() {
-    initFirebase();
+    if (!isFirebaseReady) initFirebase();
     if (firebaseAuth) {
       await firebaseAuth.signOut();
     }
@@ -212,10 +295,11 @@
    * Listen to Firebase Auth state
    */
   function onAuthStateChanged(callback) {
-    initFirebase();
+    if (!isFirebaseReady) initFirebase();
     if (firebaseAuth) {
       return firebaseAuth.onAuthStateChanged(callback);
     }
+    // Poll until auth is ready
     const interval = setInterval(() => {
       if (initFirebase() && firebaseAuth) {
         clearInterval(interval);
@@ -235,8 +319,14 @@
     adminSignIn: adminSignIn,
     adminSignOut: adminSignOut,
     onAuthStateChanged: onAuthStateChanged,
-    getFirestore: () => (initFirebase() ? firestoreDb : null),
-    getAuth: () => (initFirebase() ? firebaseAuth : null),
+    getFirestore: () => {
+      if (!isFirebaseReady) initFirebase();
+      return firestoreDb || null;
+    },
+    getAuth: () => {
+      if (!isFirebaseReady) initFirebase();
+      return firebaseAuth || null;
+    },
     isReady: () => isFirebaseReady
   });
 
