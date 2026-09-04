@@ -12,8 +12,6 @@ class VendorDatabase {
   constructor() {
     this.db = null;
     this.initPromise = this.init();
-    this.firestoreListenerAttached = false;
-    this.unsubscribeFirestore = null;
     this.cloudOnly = !!(typeof window !== "undefined" && window.DEVKA_CLOUD_ONLY);
     this.setupCloudSync();
   }
@@ -49,105 +47,24 @@ class VendorDatabase {
     });
   }
 
-  /**
-   * Set up real-time bidirectional listener with Firebase Firestore
-   */
   setupCloudSync() {
-    const tryConnect = () => this.connectCloudSync();
-
-    if (window.DevkaCloud?.getFirestore()) {
-      tryConnect();
-    } else {
-      window.addEventListener("DOMContentLoaded", tryConnect);
-      window.addEventListener("load", tryConnect);
-    }
-    window.addEventListener("devka_firebase_ready", tryConnect);
-    [500, 1500, 3500, 6000].forEach((ms) => setTimeout(tryConnect, ms));
-    setTimeout(() => this.processSyncQueue && this.processSyncQueue(), 3000);
-  }
-
-  /**
-   * Connect or reconnect the real-time Firestore listener
-   */
-  connectCloudSync() {
-    const db = window.DevkaCloud?.getFirestore();
-    if (!db) return;
-    if (this.firestoreListenerAttached && this.unsubscribeFirestore) return;
-
-    try {
-      if (this.unsubscribeFirestore) {
-        try { this.unsubscribeFirestore(); } catch(e) {}
-        this.unsubscribeFirestore = null;
-      }
-      this.unsubscribeFirestore = db.collection("vendors").onSnapshot(
-        (snapshot) => {
-          this.firestoreListenerAttached = true;
-          let hasChanges = false;
-          snapshot.docChanges().forEach((change) => {
-            const vendorData = change.doc.data();
-            if (change.type === "added" || change.type === "modified") {
-              this.cacheVendorLocally(vendorData);
-              hasChanges = true;
-            } else if (change.type === "removed") {
-              this.deleteVendorLocally(change.doc.id);
-              hasChanges = true;
-            }
-          });
-          if (hasChanges) {
+    // In admin portal, poll Supabase every 15s to automatically show new vendor submissions
+    if (typeof window !== "undefined") {
+      setInterval(async () => {
+        try {
+          const remote = await this.getAllVendors();
+          if (remote && remote.length > 0) {
             window.dispatchEvent(new CustomEvent("devka_vendor_updated", { detail: { realtime: true } }));
           }
-        },
-        (err) => {
-          console.warn("[DevkaCloud] Firestore real-time listener notice:", err.message);
-          this.firestoreListenerAttached = false;
-        }
-      );
-      this.firestoreListenerAttached = true;
-      console.log("[DevkaCloud] Firestore real-time listener active.");
-    } catch (e) {
-      console.warn("[DevkaCloud] Firestore listener setup error:", e.message);
+        } catch (e) {}
+      }, 15000);
     }
   }
 
-  async enqueueFailedSync(vendorId, payload) {
-    try {
-      const sanitized = JSON.parse(JSON.stringify(payload));
-      if (sanitized.documents) {
-        for (const k in sanitized.documents) {
-          if (sanitized.documents[k]?.data) delete sanitized.documents[k].data;
-        }
-      }
-      const raw = localStorage.getItem("devka_sync_queue") || "[]";
-      const queue = JSON.parse(raw);
-      queue.push({ id: vendorId, payload: sanitized, ts: Date.now() });
-      localStorage.setItem("devka_sync_queue", JSON.stringify(queue.slice(-50)));
-    } catch (e) {
-      console.warn("Sync queue enqueue notice:", e);
-    }
-  }
-
-  async processSyncQueue() {
-    const db = window.DevkaCloud?.getFirestore();
-    if (!db) return;
-    try {
-      const raw = localStorage.getItem("devka_sync_queue");
-      if (!raw) return;
-      const queue = JSON.parse(raw || "[]");
-      if (!Array.isArray(queue) || queue.length === 0) return;
-      const remaining = [];
-      for (const item of queue) {
-        try {
-          await db.collection("vendors").doc(item.id).set(item.payload, { merge: true });
-          console.log(`[DevkaCloud] Synced queued vendor ${item.id} to Firestore.`);
-        } catch (e) {
-          console.warn(`[DevkaCloud] Retry sync pending for ${item.id}:`, e.message || e);
-          remaining.push(item);
-        }
-      }
-      localStorage.setItem("devka_sync_queue", JSON.stringify(remaining));
-    } catch (e) {
-      console.warn("[DevkaCloud] processSyncQueue notice:", e);
-    }
+  connectCloudSync() {
+    this.getAllVendors().then(() => {
+      window.dispatchEvent(new CustomEvent("devka_vendor_updated", { detail: { realtime: true } }));
+    }).catch(() => {});
   }
 
   async cacheVendorLocally(vendor) {
@@ -214,33 +131,19 @@ class VendorDatabase {
   }
 
   async getAllVendors() {
-    // 1. Wait for Firestore to ensure cold-start connections have time to establish
-    let db = window.DevkaCloud?.getFirestore();
-    if (!db && window.DevkaCloud?.waitForFirestore) {
-      db = await window.DevkaCloud.waitForFirestore(5000);
-    }
-
-    if (db) {
+    // 1. Fetch from Supabase Cloud
+    if (window.DevkaCloud && typeof window.DevkaCloud.getAllVendors === "function") {
       try {
-        const fetchPromise = db.collection("vendors").get();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Firestore getAll timeout (10s)")), 10000)
-        );
-        const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
-        if (snapshot) {
-          const cloudList = [];
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-            cloudList.push(data);
-            this.cacheVendorLocally(data);
-          });
-          cloudList.sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
-          if (cloudList.length > 0) {
-            return cloudList;
+        const cloudList = await window.DevkaCloud.getAllVendors();
+        if (cloudList && Array.isArray(cloudList)) {
+          for (const item of cloudList) {
+            this.cacheVendorLocally(item);
           }
+          cloudList.sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+          return cloudList;
         }
       } catch (err) {
-        console.warn("[DevkaCloud] Firestore query notice (using local cache):", err.message);
+        console.warn("[DevkaCloud] Supabase getAllVendors notice:", err.message);
       }
     }
 
@@ -252,19 +155,10 @@ class VendorDatabase {
 
   async getVendorById(id) {
     if (!id) return null;
-    let db = window.DevkaCloud?.getFirestore();
-    if (!db && window.DevkaCloud?.waitForFirestore) {
-      db = await window.DevkaCloud.waitForFirestore(3000);
-    }
-    if (db) {
+    if (window.DevkaCloud && typeof window.DevkaCloud.getVendorById === "function") {
       try {
-        const fetchPromise = db.collection("vendors").doc(id).get();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Firestore getById timeout")), 8000)
-        );
-        const doc = await Promise.race([fetchPromise, timeoutPromise]);
-        if (doc && doc.exists) {
-          const v = doc.data();
+        const v = await window.DevkaCloud.getVendorById(id);
+        if (v) {
           this.cacheVendorLocally(v);
           return v;
         }
@@ -296,49 +190,14 @@ class VendorDatabase {
     // 1. Save in local cache first for instant UI response and offline safety
     if (!this.cloudOnly) await this.cacheVendorLocally(vendor);
 
-    // 2. Persist to Firebase Firestore
-    let db = window.DevkaCloud?.getFirestore();
-    if (!db && window.DevkaCloud?.waitForFirestore) {
-      db = await window.DevkaCloud.waitForFirestore(5000);
-    }
-
-    if (db) {
-      let payload;
+    // 2. Persist to Supabase Cloud
+    if (window.DevkaCloud && typeof window.DevkaCloud.saveVendor === "function") {
       try {
-        payload = JSON.parse(JSON.stringify(vendor));
-        // Strip out large base64 data strings if Supabase URL exists or if > 60KB to keep document safe under 1MB Firestore limit
-        if (payload.documents) {
-          for (const key in payload.documents) {
-            const d = payload.documents[key];
-            if (d) {
-              if (d.url && d.data) {
-                delete d.data;
-              } else if (d.data && d.data.length > 60000) {
-                delete d.data;
-              }
-            }
-          }
-        }
-
-        await Promise.race([
-          db.collection("vendors").doc(vendor.id).set(payload, { merge: true }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore write timeout (10s)")), 10000))
-        ]);
-
-        console.log(`[DevkaCloud] Vendor ${vendor.id} saved to Firestore successfully!`);
-        try { this.processSyncQueue(); } catch (e) {}
+        await window.DevkaCloud.saveVendor(vendor);
+        console.log(`[DevkaCloud] Vendor ${vendor.id} saved to Supabase successfully.`);
       } catch (err) {
-        console.error("[DevkaCloud] Firestore save error:", err.message || err);
-        if (payload) {
-          try { this.enqueueFailedSync(vendor.id, payload); } catch (e) {}
-        }
+        console.error("[DevkaCloud] Supabase save error:", err.message || err);
       }
-    } else {
-      console.warn("[DevkaCloud] Firestore not available at save time; stored in local sync queue.");
-      try {
-        const payload = JSON.parse(JSON.stringify(vendor));
-        this.enqueueFailedSync(vendor.id, payload);
-      } catch (e) {}
     }
 
     // Trigger local custom event for tabs
@@ -396,14 +255,13 @@ class VendorDatabase {
       }
     }
 
-    // 2. Delete from Firestore
-    const db = window.DevkaCloud?.getFirestore();
-    if (db) {
+    // 2. Delete record from Supabase table
+    if (window.DevkaCloud && typeof window.DevkaCloud.deleteVendor === "function") {
       try {
-        await db.collection("vendors").doc(id).delete();
-        console.log(`[DevkaCloud] Deleted vendor ${id} from Firestore.`);
+        await window.DevkaCloud.deleteVendor(id);
+        console.log(`[DevkaCloud] Deleted vendor ${id} from Supabase.`);
       } catch (e) {
-        console.warn("[DevkaCloud] Firestore delete notice:", e.message);
+        console.warn("[DevkaCloud] Supabase delete notice:", e.message);
       }
     }
 
@@ -413,6 +271,15 @@ class VendorDatabase {
   }
 
   async generateNextId(type = "firm") {
+    // 1. Try atomic Supabase sequence generator
+    if (window.DevkaCloud && typeof window.DevkaCloud.getNextVendorId === "function") {
+      try {
+        const cloudId = await window.DevkaCloud.getNextVendorId(type);
+        if (cloudId) return cloudId;
+      } catch (e) {}
+    }
+
+    // 2. Fallback to calculating next ID from existing records
     const list = await this.getAllVendors();
     const year = new Date().getFullYear();
     const prefix = type === "guest" ? `DBR-GST-${year}-` : `DBR-VEN-${year}-`;
