@@ -43,20 +43,30 @@
   document.addEventListener("DOMContentLoaded", initSupabase);
   window.addEventListener("load", initSupabase);
 
-  // Helper: Get active auth token (admin session JWT or fallback)
+  // Helper: Get active auth token (admin session JWT or administrative fallback)
   function getAuthHeader(isAdmin = false) {
     if (isAdmin) {
-      let token = SUPABASE_CONFIG.secretKey;
+      let token = null;
       try {
         const raw = sessionStorage.getItem("devka_admin_session");
         if (raw) {
           const s = JSON.parse(raw);
-          if (s && s.token) token = s.token;
+          if (s && s.token && typeof s.token === "string" && s.token.split(".").length === 3) {
+            token = s.token;
+          }
         }
       } catch (e) {}
+
+      if (token) {
+        return {
+          "apikey": SUPABASE_CONFIG.anonKey,
+          "Authorization": "Bearer " + token
+        };
+      }
+
       return {
-        "apikey": SUPABASE_CONFIG.anonKey,
-        "Authorization": "Bearer " + token
+        "apikey": SUPABASE_CONFIG.secretKey,
+        "Authorization": "Bearer " + SUPABASE_CONFIG.secretKey
       };
     }
     return {
