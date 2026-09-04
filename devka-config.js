@@ -9,14 +9,14 @@
   const _d = (s) => decodeURIComponent(escape(atob(s)));
 
   // Firebase Config
-  const FIREBASE_CONFIG = {
-    apiKey:            "AIzaSyCTMmjzFnBO1_P1Z880JV4aPVqu0hxiyvo",
-    authDomain:        "vendorconnection-f7277.firebaseapp.com",
-    projectId:         "vendorconnection-f7277",
-    storageBucket:     "vendorconnection-f7277.firebasestorage.app",
-    messagingSenderId: "836120803543",
-    appId:             "1:836120803543:web:c6a31180bc1809fc2fd892"
-  };
+  const firebaseConfig = {
+  apiKey: "AIzaSyCyJ4kytCH64uEjJ7Wr3UGsCrVFnR3F_jw",
+  authDomain: "vendorconnectiondbr.firebaseapp.com",
+  projectId: "vendorconnectiondbr",
+  storageBucket: "vendorconnectiondbr.firebasestorage.app",
+  messagingSenderId: "317902521667",
+  appId: "1:317902521667:web:f29e47a36581af0e411bf6"
+};
 
   // Supabase Config
   const SUPABASE_CONFIG = {
