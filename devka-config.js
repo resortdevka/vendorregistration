@@ -1,6 +1,7 @@
 /**
  * Devka Beach Resort — Cloud Configuration & Services Module
- * Firebase Firestore (data) + Supabase (file storage)
+ * Completely powered by Supabase Cloud (PostgreSQL Database + Storage + Auth)
+ * Zero Firebase dependencies.
  */
 
 (function (window) {
@@ -8,17 +9,7 @@
 
   const _d = (s) => decodeURIComponent(escape(atob(s)));
 
-  // Firebase Config
-  const firebaseConfig = {
-  apiKey: "AIzaSyCyJ4kytCH64uEjJ7Wr3UGsCrVFnR3F_jw",
-  authDomain: "vendorconnectiondbr.firebaseapp.com",
-  projectId: "vendorconnectiondbr",
-  storageBucket: "vendorconnectiondbr.firebasestorage.app",
-  messagingSenderId: "317902521667",
-  appId: "1:317902521667:web:f29e47a36581af0e411bf6"
-};
-
-  // Supabase Config
+  // Supabase Configuration
   const SUPABASE_CONFIG = {
     url:       _d("aHR0cHM6Ly9pa3hybXJ1cnRnd3ljYWdrcmx4ZC5zdXBhYmFzZS5jbw=="),
     anonKey:   _d("c2JfcHVibGlzaGFibGVfSkt1VzZWVVRFcXVtMHdYYWplbEFoZ184NjBJTFVnVw=="),
@@ -32,77 +23,260 @@
     "admin@devkabeachresort.com": "admin@devkabeachresort.com"
   };
 
-  // State
-  let firestoreDb  = null;
-  let firebaseAuth = null;
-  let _ready       = false;
+  let supabaseClient = null;
 
-  // Core Init
-  function initFirebase() {
-    if (_ready && firestoreDb) return true;
-    const fb = window.firebase;
-    if (!fb) return false;
-
-    try {
-      const app = (fb.apps && fb.apps.length > 0)
-        ? fb.app()
-        : fb.initializeApp(FIREBASE_CONFIG);
-
-      if (!firebaseAuth && typeof fb.auth === "function") {
-        try { firebaseAuth = fb.auth(app); } catch (e) {}
+  function initSupabase() {
+    if (supabaseClient) return supabaseClient;
+    if (window.supabase && typeof window.supabase.createClient === "function") {
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        console.log("[DevkaCloud] Supabase JS client initialized successfully.");
+      } catch (e) {
+        console.warn("[DevkaCloud] Supabase client init warning:", e);
       }
+    }
+    return supabaseClient;
+  }
 
-      if (!firestoreDb && typeof fb.firestore === "function") {
-        try { firestoreDb = fb.firestore(app); } catch (e) {}
-      }
+  // Auto-init on load
+  initSupabase();
+  document.addEventListener("DOMContentLoaded", initSupabase);
+  window.addEventListener("load", initSupabase);
 
-      if (firestoreDb) {
-        _ready = true;
-        console.log("[DevkaCloud] Firebase Firestore initialized successfully");
-        window.dispatchEvent(new CustomEvent("devka_firebase_ready"));
+  // Helper: Get active auth token (admin session JWT or fallback)
+  function getAuthHeader(isAdmin = false) {
+    if (isAdmin) {
+      let token = SUPABASE_CONFIG.secretKey;
+      try {
+        const raw = sessionStorage.getItem("devka_admin_session");
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s && s.token) token = s.token;
+        }
+      } catch (e) {}
+      return {
+        "apikey": SUPABASE_CONFIG.anonKey,
+        "Authorization": "Bearer " + token
+      };
+    }
+    return {
+      "apikey": SUPABASE_CONFIG.anonKey,
+      "Authorization": "Bearer " + SUPABASE_CONFIG.anonKey
+    };
+  }
+
+  // ─── Database Operations (PostgREST API) ───────────────────────────────────
+
+  /**
+   * Save (insert or update) a vendor in the Supabase vendors table
+   */
+  async function saveVendorToSupabase(vendor) {
+    if (!vendor || !vendor.id) throw new Error("Vendor ID is required");
+
+    // Clean payload (strip heavy data URLs)
+    const sanitizedDocs = {};
+    if (vendor.documents) {
+      for (const k in vendor.documents) {
+        const d = vendor.documents[k];
+        if (d) {
+          sanitizedDocs[k] = {
+            name: d.name || k,
+            size: d.size || 0,
+            type: d.type || "",
+            url: d.url || "",
+            storagePath: d.storagePath || "",
+            uploadedAt: d.uploadedAt || Date.now()
+          };
+        }
       }
-    } catch (e) {
-      console.warn("[DevkaCloud] Firebase init notice:", e.message);
     }
 
-    return _ready;
+    const row = {
+      id:           vendor.id,
+      type:         vendor.type || "firm",
+      status:       vendor.status || "Submitted",
+      submitted_at: Number(vendor.submittedAt) || Date.now(),
+      updated_at:   Date.now(),
+      company:      vendor.company || {},
+      contact:      vendor.contact || {},
+      guest:        vendor.guest || {},
+      bank:         vendor.bank || {},
+      billing:      vendor.billing || {},
+      payment:      vendor.payment || {},
+      documents:    sanitizedDocs,
+      admin_notes:  vendor.adminNotes || ""
+    };
+
+    const isAdmin = !!(typeof sessionStorage !== "undefined" && sessionStorage.getItem("devka_admin_session"));
+    const url = `${SUPABASE_CONFIG.url}/rest/v1/vendors`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...getAuthHeader(isAdmin),
+        "Content-Type": "application/json",
+        "Prefer": isAdmin ? "resolution=merge-duplicates,return=minimal" : "return=minimal"
+      },
+      body: JSON.stringify(row)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Supabase save failed (HTTP ${res.status}): ${errText}`);
+    }
+
+    console.log(`[DevkaCloud] Vendor ${vendor.id} saved to Supabase successfully.`);
+    return vendor;
   }
 
-  // Wait for Firestore Promise helper
-  async function waitForFirestore(timeoutMs = 6000) {
-    if (firestoreDb) return firestoreDb;
-    initFirebase();
-    if (firestoreDb) return firestoreDb;
-    const start = Date.now();
-    return new Promise(function(resolve) {
-      const iv = setInterval(function() {
-        initFirebase();
-        if (firestoreDb || (Date.now() - start >= timeoutMs)) {
-          clearInterval(iv);
-          resolve(firestoreDb || null);
+  /**
+   * Fetch all vendors from Supabase (for Admin Portal)
+   */
+  async function fetchAllVendorsFromSupabase() {
+    const url = `${SUPABASE_CONFIG.url}/rest/v1/vendors?order=submitted_at.desc`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...getAuthHeader(true) // Use admin credentials to read all records
+      }
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Supabase fetch failed (HTTP ${res.status}): ${errText}`);
+    }
+
+    const rows = await res.json();
+    return (rows || []).map((r) => ({
+      id:           r.id,
+      type:         r.type,
+      status:       r.status,
+      submittedAt:  Number(r.submitted_at),
+      updatedAt:    Number(r.updated_at),
+      company:      r.company || {},
+      contact:      r.contact || {},
+      guest:        r.guest || {},
+      bank:         r.bank || {},
+      billing:      r.billing || {},
+      payment:      r.payment || {},
+      documents:    r.documents || {},
+      adminNotes:   r.admin_notes || ""
+    }));
+  }
+
+  /**
+   * Fetch single vendor by ID
+   */
+  async function fetchVendorByIdFromSupabase(id) {
+    if (!id) return null;
+    const url = `${SUPABASE_CONFIG.url}/rest/v1/vendors?id=eq.${encodeURIComponent(id)}&limit=1`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...getAuthHeader(true)
+      }
+    });
+
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!rows || rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      id:           r.id,
+      type:         r.type,
+      status:       r.status,
+      submittedAt:  Number(r.submitted_at),
+      updatedAt:    Number(r.updated_at),
+      company:      r.company || {},
+      contact:      r.contact || {},
+      guest:        r.guest || {},
+      bank:         r.bank || {},
+      billing:      r.billing || {},
+      payment:      r.payment || {},
+      documents:    r.documents || {},
+      adminNotes:   r.admin_notes || ""
+    };
+  }
+
+  /**
+   * Update vendor status or admin notes
+   */
+  async function updateVendorInSupabase(id, fields) {
+    if (!id) return;
+    const patch = { updated_at: Date.now() };
+    if (fields.status !== undefined)     patch.status = fields.status;
+    if (fields.adminNotes !== undefined) patch.admin_notes = fields.adminNotes;
+    if (fields.company !== undefined)    patch.company = fields.company;
+
+    const url = `${SUPABASE_CONFIG.url}/rest/v1/vendors?id=eq.${encodeURIComponent(id)}`;
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        ...getAuthHeader(true),
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(patch)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Supabase update failed (HTTP ${res.status}): ${errText}`);
+    }
+  }
+
+  /**
+   * Delete vendor record from Supabase
+   */
+  async function deleteVendorFromSupabase(id) {
+    if (!id) return;
+    const url = `${SUPABASE_CONFIG.url}/rest/v1/vendors?id=eq.${encodeURIComponent(id)}`;
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        ...getAuthHeader(true)
+      }
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`Supabase delete notice: ${errText}`);
+    }
+  }
+
+  /**
+   * Generate next sequential registration ID atomically via SQL function
+   */
+  async function getNextVendorIdFromSupabase(type = "firm") {
+    try {
+      const url = `${SUPABASE_CONFIG.url}/rest/v1/rpc/get_next_vendor_id`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          ...getAuthHeader(false),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ p_type: type })
+      });
+      if (res.ok) {
+        const nextId = await res.json();
+        if (typeof nextId === "string" && nextId.startsWith("DBR-")) {
+          return nextId;
         }
-      }, 100);
-    });
+      }
+    } catch (e) {
+      console.warn("[DevkaCloud] RPC get_next_vendor_id notice:", e);
+    }
+    return null; // Fall back to client calculation
   }
 
-  // Auto-init with retries for async CDN loading
-  (function boot() {
-    initFirebase();
-    document.addEventListener("DOMContentLoaded", function() { if (!firestoreDb) initFirebase(); });
-    window.addEventListener("load", function() { if (!firestoreDb) initFirebase(); });
-    [200, 600, 1500, 3000].forEach(function(ms) {
-      setTimeout(function() { if (!firestoreDb) initFirebase(); }, ms);
-    });
-  })();
+  // ─── Storage Operations (Supabase Storage) ─────────────────────────────────
 
-  // Supabase Upload
   async function uploadToSupabase(file, folderName, customFileName) {
     folderName = folderName || "attachments";
     if (!file) throw new Error("No file provided");
     var ext   = (file.name.split(".").pop() || "bin").toLowerCase();
     var base  = (customFileName || file.name.replace(/\.[^/.]+$/, ""))
                   .replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 40);
-    var fname = base + "_" + Date.now() + "_" + Math.random().toString(36).slice(2,7) + "." + ext;
+    var fname = base + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7) + "." + ext;
     var path  = folderName.replace(/[^a-zA-Z0-9_-]/g, "_") + "/" + fname;
     var mime  = file.type || "application/octet-stream";
     if (ext === "pdf")                        mime = "application/pdf";
@@ -120,14 +294,20 @@
       },
       body: file
     });
-    if (!res.ok) throw new Error("Supabase upload failed (" + res.status + "): " + await res.text());
+    if (!res.ok) throw new Error("Supabase file upload failed (" + res.status + "): " + await res.text());
     var publicUrl = SUPABASE_CONFIG.url + "/storage/v1/object/public/" +
       encodeURIComponent(SUPABASE_CONFIG.bucket) + "/" + encodeURIComponent(path);
-    return { success: true, name: file.name, storagePath: path, url: publicUrl,
-             size: file.size, type: mime, uploadedAt: Date.now() };
+    return {
+      success: true,
+      name: file.name,
+      storagePath: path,
+      url: publicUrl,
+      size: file.size,
+      type: mime,
+      uploadedAt: Date.now()
+    };
   }
 
-  // Supabase Delete
   async function deleteFromSupabase(storagePath) {
     if (!storagePath) return;
     await fetch(SUPABASE_CONFIG.url + "/storage/v1/object/" +
@@ -139,76 +319,85 @@
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ prefixes: [storagePath] })
-    }).catch(function(e) { console.warn("[DevkaCloud] Supabase delete warning:", e); });
+    }).catch(function (e) { console.warn("[DevkaCloud] Supabase delete warning:", e); });
   }
 
-  // Admin Sign-In
+  // ─── Admin Authentication ──────────────────────────────────────────────────
+
   async function adminSignIn(usernameOrEmail, password) {
-    if (!firebaseAuth) {
-      await new Promise(function(resolve) {
-        var t = 0;
-        var iv = setInterval(function() {
-          initFirebase();
-          t += 100;
-          if (firebaseAuth || t >= 6000) { clearInterval(iv); resolve(); }
-        }, 100);
-      });
+    const cleanUser = (usernameOrEmail || "").trim().toLowerCase();
+    const email = ADMIN_EMAIL_MAP[cleanUser] || (usernameOrEmail || "").trim();
+
+    if (!email || !password) {
+      throw new Error("Please enter both Admin Email/Username and Password.");
     }
-    if (!firebaseAuth) throw new Error("Firebase Authentication not loaded. Please refresh the page.");
 
-    var cleanUser = (usernameOrEmail || "").trim().toLowerCase();
-    var email = ADMIN_EMAIL_MAP[cleanUser] || (usernameOrEmail || "").trim();
+    // Call Supabase Authentication endpoint to verify email and password
+    const authUrl = `${SUPABASE_CONFIG.url}/auth/v1/token?grant_type=password`;
+    const res = await fetch(authUrl, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_CONFIG.anonKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-    try {
-      var cred = await firebaseAuth.signInWithEmailAndPassword(email, password);
-      return {
-        success: true,
-        user: {
-          uid:         cred.user.uid,
-          email:       cred.user.email,
-          displayName: cred.user.displayName || "Admin Officer"
-        }
-      };
-    } catch (err) {
-      var code = err.code || "";
-      var msg  = "Invalid credentials. Please check your username and password.";
-      if (code.indexOf("user-not-found") > -1 || code.indexOf("wrong-password") > -1 || code.indexOf("invalid-credential") > -1)
-        msg = "Incorrect Admin ID or Password. Please try again.";
-      else if (code.indexOf("too-many-requests") > -1)
-        msg = "Too many failed attempts. Please wait a moment and try again.";
-      else if (err.message)
-        msg = err.message;
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      const msg = data.error_description || data.msg || data.error || "Incorrect Admin Email or Password.";
       throw new Error(msg);
     }
+
+    const session = {
+      uid: data.user?.id || "admin-officer",
+      email: data.user?.email || email,
+      displayName: data.user?.user_metadata?.full_name || "Admin Officer",
+      token: data.access_token,
+      loggedInAt: Date.now()
+    };
+    sessionStorage.setItem("devka_admin_session", JSON.stringify(session));
+
+    // Also sync Supabase JS client if available
+    const client = initSupabase();
+    if (client && client.auth && data.access_token && data.refresh_token) {
+      try {
+        await client.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        });
+      } catch (e) {}
+    }
+
+    return {
+      success: true,
+      user: session
+    };
   }
 
-  // Admin Sign-Out
   async function adminSignOut() {
-    if (firebaseAuth) await firebaseAuth.signOut().catch(function() {});
-  }
-
-  // Auth State Listener
-  function onAuthStateChanged(cb) {
-    if (firebaseAuth) return firebaseAuth.onAuthStateChanged(cb);
-    var iv = setInterval(function() {
-      initFirebase();
-      if (firebaseAuth) { clearInterval(iv); firebaseAuth.onAuthStateChanged(cb); }
-    }, 200);
-    return function() { clearInterval(iv); };
+    sessionStorage.removeItem("devka_admin_session");
+    const client = initSupabase();
+    if (client && client.auth) {
+      try { await client.auth.signOut(); } catch (e) {}
+    }
   }
 
   // Public API
   window.DevkaCloud = Object.freeze({
-    init:               initFirebase,
-    waitForFirestore:   waitForFirestore,
+    init:               initSupabase,
     uploadDocument:     uploadToSupabase,
     deleteDocument:     deleteFromSupabase,
     adminSignIn:        adminSignIn,
     adminSignOut:       adminSignOut,
-    onAuthStateChanged: onAuthStateChanged,
-    getFirestore: function() { if (!firestoreDb) initFirebase(); return firestoreDb  || null; },
-    getAuth:      function() { if (!firebaseAuth) initFirebase(); return firebaseAuth || null; },
-    isReady:      function() { return _ready && !!firestoreDb; }
+    // Database Methods
+    saveVendor:         saveVendorToSupabase,
+    getAllVendors:      fetchAllVendorsFromSupabase,
+    getVendorById:      fetchVendorByIdFromSupabase,
+    updateVendor:       updateVendorInSupabase,
+    deleteVendor:       deleteVendorFromSupabase,
+    getNextVendorId:    getNextVendorIdFromSupabase,
+    isReady:            function () { return true; }
   });
 
 })(typeof window !== "undefined" ? window : globalThis);
