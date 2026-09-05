@@ -32,9 +32,12 @@ function decrypt(hex, salt) {
 const URL       = "https://ikxrmrurtgwycagkrlxd.supabase.co";
 const ANON_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreHJtcnVydGd3eWNhZ2tybHhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NTUwMDQsImV4cCI6MjEwNDAzMTAwNH0.8-KMTAfbhc0Z7JnPwcxY4LozM1rz62CQjoiwTa_7sLc";
 const SECRET_KEY= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreHJtcnVydGd3eWNhZ2tybHhkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODQ1NTAwNCwiZXhwIjoyMTA0MDMxMDA0fQ.uML4awjapn4BLl7d4BuAIdYS8EHzDuPHqEoejDCXG_c";
+const BREVO_KEY = "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";
 
 console.log("=== ENCRYPTED CIPHERTEXT PAYLOAD ===");
 console.log("u (URL):       ", encrypt(URL, SALT));
 console.log("a (Anon Key):  ", encrypt(ANON_KEY, SALT));
 console.log("s (Secret Key):", encrypt(SECRET_KEY, SALT));
+console.log("b (Brevo Key): ", encrypt(BREVO_KEY, SALT));
 console.log("=====================================");
+
