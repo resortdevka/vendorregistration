@@ -28,7 +28,8 @@
   // Obfuscated Ciphertext Payload (Zero plaintext API keys exposed in source code)
   const _VAULT = Object.freeze({
     u: "b5bdd1fd0f4a1dd6abd7e1092b858ab604ca213f6f93b1d4f837113c99fd05e12d4d8797bd9cdf32",
-    a: "aac2fff5204561948dd5f344237dc6f7cad82f45558ea69e070a426a00f502f91c6e5ecd08e1d5154a61c998e243146d85a38ce8121a4966b98bcb2a3675508be2d80b0d0c4c9ff9b1615134609ad6e7252c8188e5d2c9143a7be5b0faff31417397afe2071b0a4891a1fcd37e6487c6addeb261518308d2a39b2e4e69c6b2f55f174e76e6aaf42c3c7d7bacc2cc13480a80c3a7892a408286b0e2fe0c156c61bf01d069315a6ae7e3f33f3b54a4a9a8ea501270beb4ca080e75618cc0e7ab116244f392ff050c674993af01b3397484"
+    a: "aac2fff5204561948dd5f344237dc6f7cad82f45558ea69e070a426a00f502f91c6e5ecd08e1d5154a61c998e243146d85a38ce8121a4966b98bcb2a3675508be2d80b0d0c4c9ff9b1615134609ad6e7252c8188e5d2c9143a7be5b0faff31417397afe2071b0a4891a1fcd37e6487c6addeb261518308d2a39b2e4e69c6b2f55f174e76e6aaf42c3c7d7bacc2cc13480a80c3a7892a408286b0e2fe0c156c61bf01d069315a6ae7e3f33f3b54a4a9a8ea501270beb4ca080e75618cc0e7ab116244f392ff050c674993af01b3397484",
+    b: "c5b4e2060f1b62d8069ecb498076c9c4c8a714346d93b7ccae2f4a7790eec8a2301d35d6c0e5dd2b5c68ccf9dc4f0a2247a4f8b65a792881b5f4fb64711f25f9daaf13841643d806007a5f2275b4d5e62f7f8579c49ef87e71"
   });
 
   // Dynamic In-Memory Supabase Configuration (Public Portal only requires url and anonKey)
@@ -36,6 +37,16 @@
     get url()     { return _unlock(_VAULT.u); },
     get anonKey() { return _unlock(_VAULT.a); },
     bucket: "vendor Data files"
+  };
+
+  // Dynamic In-Memory Brevo Configuration for Vendor Email Authentication
+  const BREVO_CONFIG = {
+    get apiKey() { return _unlock(_VAULT.b); },
+    endpoint: "https://api.brevo.com/v3/smtp/email",
+    sender: {
+      name: "Devka Beach Resort",
+      email: "devkabeachresortsmit@gmail.com"
+    }
   };
 
   const ADMIN_EMAIL_MAP = {
@@ -498,6 +509,121 @@
     }
   }
 
+  // ─── Brevo Email Verification ──────────────────────────────────────────
+
+  function buildVerificationEmailHtml(recipientName, otpCode) {
+    const safeName = (recipientName && recipientName.trim()) ? recipientName.trim() : "Valued Partner";
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verification Code</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8F5EE; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #17222E;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; background-color: #F8F5EE; padding: 30px 10px;">
+    <tr>
+      <td align="center">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 8px; border: 1px solid #E3DCC9; overflow: hidden; box-shadow: 0 10px 30px rgba(11, 31, 58, 0.08);">
+          <tr>
+            <td align="center" style="background-color: #0B1F3A; padding: 32px 20px;">
+              <div style="font-size: 11px; letter-spacing: 2px; color: #C6A15B; font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">
+                Devka Beach Resort &middot; Daman
+              </div>
+              <h1 style="color: #F8F5EE; font-size: 22px; font-weight: 600; margin: 0; font-family: Georgia, serif;">
+                Vendor Email Verification
+              </h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 36px 32px 28px 32px;">
+              <p style="font-size: 15px; line-height: 1.6; color: #17222E; margin-top: 0;">
+                Dear <strong>${safeName}</strong>,
+              </p>
+              <p style="font-size: 14px; line-height: 1.6; color: #5B6B7C; margin-bottom: 24px;">
+                You are completing your official vendor registration for <strong>Devka Beach Resort</strong>. Please use the following single-use verification code in the Declaration section to authenticate your contact email address:
+              </p>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
+                <tr>
+                  <td align="center">
+                    <div style="background-color: #F8F5EE; border: 2px dashed #C6A15B; border-radius: 8px; padding: 18px 24px; display: inline-block; text-align: center;">
+                      <span style="font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #9c814a; text-transform: uppercase; display: block; margin-bottom: 6px;">Your 6-Digit Verification Code</span>
+                      <span style="font-size: 36px; font-weight: 700; letter-spacing: 10px; color: #0B1F3A; font-family: monospace; display: block; padding-left: 10px;">${otpCode}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <p style="font-size: 13px; color: #5B6B7C; line-height: 1.5; margin-bottom: 8px;">
+                &#9201; <strong>Validity:</strong> This code is valid for <strong>10 minutes</strong>. Do not share this code with anyone.
+              </p>
+              <p style="font-size: 13px; color: #5B6B7C; line-height: 1.5; margin-bottom: 0;">
+                If you did not request this registration, you can safely disregard this email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #F8F5EE; border-top: 1px solid #E3DCC9; padding: 20px 32px; text-align: center;">
+              <p style="font-size: 12px; color: #5B6B7C; margin: 0; line-height: 1.5;">
+                Devka Beach Resort, Nani Daman, Daman &amp; Diu 396210<br>
+                Official Procurement &amp; Vendor Management System
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+  }
+
+  async function sendBrevoEmailVerificationOtp(toEmail, toName, otpCode) {
+    if (!toEmail || !toEmail.includes("@")) {
+      throw new Error("Invalid recipient email address");
+    }
+    if (!otpCode) {
+      throw new Error("OTP code is required");
+    }
+
+    const payload = {
+      sender: BREVO_CONFIG.sender,
+      to: [
+        {
+          email: toEmail.trim(),
+          name: (toName && toName.trim()) ? toName.trim() : "Vendor Partner"
+        }
+      ],
+      subject: `Email Verification Code [${otpCode}] — Devka Beach Resort`,
+      htmlContent: buildVerificationEmailHtml(toName, otpCode)
+    };
+
+    const res = await fetch(BREVO_CONFIG.endpoint, {
+      method: "POST",
+      headers: {
+        "api-key": BREVO_CONFIG.apiKey,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      let msg = `Brevo API returned status ${res.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        msg = errJson.message || msg;
+      } catch (_) {
+        msg = errText || msg;
+      }
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  }
+
   // Public API
   window.DevkaCloud = Object.freeze({
     init: initSupabase,
@@ -512,6 +638,9 @@
     updateVendor: updateVendorInSupabase,
     deleteVendor: deleteVendorFromSupabase,
     getNextVendorId: getNextVendorIdFromSupabase,
+    // Brevo Email Verification
+    sendEmailVerificationOtp: sendBrevoEmailVerificationOtp,
+    brevoConfig: BREVO_CONFIG,
     isReady: function () { return true; }
   });
 
