@@ -849,6 +849,102 @@
       accent-color: var(--gold-dim);
     }
 
+    /* Email Verification in Declaration */
+    .email-verify-box {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--white);
+      padding: 20px;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 14px rgba(11, 31, 58, 0.04);
+      transition: all 0.3s ease;
+    }
+    .email-verify-box.verified {
+      border-color: var(--success);
+      background: #F4F9F5;
+    }
+    .email-verify-box.has-error {
+      border-color: var(--error);
+      background: #FFFDFD;
+    }
+    .email-verify-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .email-verify-title {
+      font-weight: 600;
+      font-size: 0.96rem;
+      color: var(--navy);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .email-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    .email-badge-pending {
+      background: #FFF4E5;
+      color: #B25E09;
+      border: 1px solid #FFE2B8;
+    }
+    .email-badge-verified {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid #B8DEC6;
+    }
+    .email-verify-desc {
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .email-display-pill {
+      display: inline-block;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-weight: 600;
+      color: var(--navy);
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    .otp-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .otp-code-input {
+      letter-spacing: 5px;
+      font-size: 1.25rem;
+      font-weight: 700;
+      text-align: center;
+      width: 150px;
+      height: 40px;
+      font-family: monospace;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border 0.2s ease;
+      background: var(--white);
+    }
+    .otp-code-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(198, 161, 91, 0.2);
+    }
+
     .wizard-footer {
       display: flex;
       justify-content: space-between;
@@ -1023,6 +1119,18 @@
         payment: { method: "", creditPeriod: "" },
         declarationAccepted: false,
         termsAccepted: false,
+        emailVerification: {
+          verified: false,
+          otpSent: false,
+          code: "",
+          inputCode: "",
+          verifiedEmail: "",
+          verifiedAt: null,
+          sending: false,
+          verifying: false,
+          resendCooldown: 0,
+          error: ""
+        },
         errors: {}
       };
     }
@@ -1046,6 +1154,18 @@
         },
         documents: {}, // aadhaar_doc, guest_photo
         declarationAccepted: false,
+        emailVerification: {
+          verified: false,
+          otpSent: false,
+          code: "",
+          inputCode: "",
+          verifiedEmail: "",
+          verifiedAt: null,
+          sending: false,
+          verifying: false,
+          resendCooldown: 0,
+          error: ""
+        },
         errors: {}
       };
     }
@@ -1449,7 +1569,7 @@
     function stepFirmPayment() {
       const p = firmDraft.payment;
       const methods = ["RTGS / NEFT", "Bank Transfer", "IMPS", "Cheque"];
-      const periods = ["Immediate", "7 Days", "15 Days", "30 Days", "45 Days"];
+      const periods = ["Immediate", "7 Days", "15 Days", "30 Days", "45 Days", "60 Days"];
       return `
   <div class="section-title">Payment Terms</div>
   <div class="section-sub">Section 6 of 7 — Choose your preferred payment method and standard credit period.</div>
@@ -1478,11 +1598,103 @@
   </div>`;
     }
 
+    // Email verification component for company / firm registration
+    function renderFirmEmailVerification() {
+      const email = (firmDraft.contact.email || "").trim();
+      const name = (firmDraft.contact.personName || "").trim();
+      const ev = firmDraft.emailVerification;
+
+      if (!email) {
+        return `
+    <div class="email-verify-box has-error" id="email-verify-box">
+      <div class="email-verify-header">
+        <div class="email-verify-title">
+          <span>✉</span> Contact Email Authentication
+        </div>
+        <span class="email-badge email-badge-pending">&#9888; Email Missing</span>
+      </div>
+      <div class="email-verify-desc">
+        No email address was found in Section 2 (Contact Person Details). Please provide an email address so we can authenticate your submission.
+      </div>
+      <button class="btn btn-outline btn-sm" data-action="goto-firm-step" data-step="2">&larr; Return to Section 2 (Contact Person)</button>
+    </div>`;
+      }
+
+      const isVerified = ev.verified && ev.verifiedEmail && ev.verifiedEmail.toLowerCase() === email.toLowerCase();
+
+      if (isVerified) {
+        return `
+    <div class="email-verify-box verified" id="email-verify-box">
+      <div class="email-verify-header">
+        <div class="email-verify-title" style="color:var(--success);">
+          <span>&#10004;</span> Contact Email Authenticated
+        </div>
+        <span class="email-badge email-badge-verified">&#10003; Verified</span>
+      </div>
+      <div class="email-verify-desc" style="color:var(--ink);">
+        The email address <span class="email-display-pill">${escapeHtml(email)}</span> for representative <strong>${escapeHtml(name || "Authorized Contact")}</strong> has been authenticated via Brevo.
+      </div>
+      <div style="font-size:0.8rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;">
+        <span>Verified for registration &bull; Single-use code authenticated</span>
+        <button class="btn btn-ghost btn-sm" style="font-size:0.75rem;padding:2px 8px;" data-action="reset-firm-email-otp">Re-verify</button>
+      </div>
+    </div>`;
+      }
+
+      return `
+    <div class="email-verify-box ${ev.error ? 'has-error' : ''}" id="email-verify-box">
+      <div class="email-verify-header">
+        <div class="email-verify-title">
+          <span>✉</span> Contact Email Authentication <span class="req">*</span>
+        </div>
+        <span class="email-badge email-badge-pending">&#9679; Verification Required</span>
+      </div>
+      <div class="email-verify-desc">
+        Please authenticate the authorized contact email address:
+        <span class="email-display-pill">${escapeHtml(email)}</span>
+      </div>
+
+      ${!ev.otpSent ? `
+        <div style="margin-top:10px;">
+          <button class="btn btn-gold" data-action="send-firm-email-otp" ${ev.sending ? 'disabled' : ''} style="font-weight:600;">
+            ${ev.sending ? '<span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> Sending Code via Brevo...' : '✉ Send Verification Code'}
+          </button>
+          <div class="hint" style="margin-top:6px;">A single-use 6-digit verification code will be sent to <strong>${escapeHtml(email)}</strong> via Brevo.</div>
+        </div>
+      ` : `
+        <div style="margin-top:12px;padding:14px;background:#F8F5EE;border-radius:6px;border:1px dashed var(--border);">
+          <div style="font-size:0.86rem;font-weight:600;color:var(--navy);margin-bottom:6px;">
+            Enter 6-Digit Code sent to ${escapeHtml(email)}:
+          </div>
+          <div class="otp-input-wrap">
+            <input type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="otp-code-input" data-bind-firm-otp value="${escapeHtml(ev.inputCode || '')}" placeholder="------">
+            <button class="btn btn-gold" data-action="verify-firm-email-otp" ${ev.verifying ? 'disabled' : ''} style="font-weight:600;">
+              ${ev.verifying ? 'Checking...' : 'Confirm Code &rarr;'}
+            </button>
+            ${ev.resendCooldown > 0 ? `
+              <span style="font-size:0.82rem;color:var(--muted);margin-left:6px;">Resend in ${ev.resendCooldown}s</span>
+            ` : `
+              <button class="btn btn-outline btn-sm" data-action="send-firm-email-otp" ${ev.sending ? 'disabled' : ''}>
+                ${ev.sending ? 'Sending...' : 'Resend Code'}
+              </button>
+            `}
+          </div>
+          <div class="hint" style="margin-top:6px;">Valid for 10 minutes. If you do not receive it promptly, check your spam or junk folder.</div>
+        </div>
+      `}
+
+      ${ev.error ? `<div class="err" style="margin-top:10px;font-weight:500;">${escapeHtml(ev.error)}</div>` : ''}
+    </div>`;
+    }
+
     // Firm Step 7: Declaration & Submit
     function stepFirmDeclaration() {
       return `
   <div class="section-title">Declaration &amp; Submit</div>
-  <div class="section-sub">Section 7 of 7 — Review terms and submit your registration directly. No OTP required.</div>
+  <div class="section-sub">Section 7 of 7 — Authenticate contact email, review terms and submit your registration.</div>
+
+  <!-- Contact Person Email Verification -->
+  ${renderFirmEmailVerification()}
 
   <div class="declaration-box">
     "I hereby declare that all information provided in this registration form is true, correct, and complete. I confirm that Devka Beach Resort reserves the right to verify all submitted documents and details."
@@ -1670,11 +1882,14 @@
         </div>
       </div>
 
+      <!-- Email Authentication Component for Guest Registration -->
+      ${renderGuestEmailVerification()}
+
       <!-- Declaration & Submit -->
       <div style="margin-top:20px;">
         <label class="accept-row">
           <input type="checkbox" data-check-guest="declarationAccepted" ${g.declarationAccepted ? 'checked' : ''}>
-          <span>I declare that all personal and identity details provided above are authentic and accurate.</span>
+          <span>I declare that all personal and identity details provided above are authentic and accurate. <span class="req">*</span></span>
         </label>
         ${errGuest("declarationAccepted")}
       </div>
@@ -1685,6 +1900,93 @@
       </div>
     </div>
   </div>`;
+    }
+
+    function renderGuestEmailVerification() {
+      const email = (guestDraft.email || "").trim();
+      const name = (guestDraft.fullName || "").trim();
+      const ev = guestDraft.emailVerification;
+
+      if (!email) {
+        return `
+    <div class="email-verify-box has-error" id="guest-email-verify-box" style="margin-top:24px;">
+      <div class="email-verify-header">
+        <div class="email-verify-title">
+          <span>✉</span> Email Authentication
+        </div>
+        <span class="email-badge email-badge-pending">&#9888; Email Missing</span>
+      </div>
+      <div class="email-verify-desc">
+        Please enter your email address in Section 1 above to authenticate your registration.
+      </div>
+    </div>`;
+      }
+
+      const isVerified = ev.verified && ev.verifiedEmail && ev.verifiedEmail.toLowerCase() === email.toLowerCase();
+
+      if (isVerified) {
+        return `
+    <div class="email-verify-box verified" id="guest-email-verify-box" style="margin-top:24px;">
+      <div class="email-verify-header">
+        <div class="email-verify-title" style="color:var(--success);">
+          <span>&#10004;</span> Email Authenticated
+        </div>
+        <span class="email-badge email-badge-verified">&#10003; Verified</span>
+      </div>
+      <div class="email-verify-desc" style="color:var(--ink);">
+        The email address <span class="email-display-pill">${escapeHtml(email)}</span> for <strong>${escapeHtml(name || "Guest Vendor")}</strong> has been authenticated via Brevo.
+      </div>
+      <div style="font-size:0.8rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;">
+        <span>Verified for registration &bull; Single-use code authenticated</span>
+        <button class="btn btn-ghost btn-sm" style="font-size:0.75rem;padding:2px 8px;" data-action="reset-guest-email-otp">Re-verify</button>
+      </div>
+    </div>`;
+      }
+
+      return `
+    <div class="email-verify-box ${ev.error ? 'has-error' : ''}" id="guest-email-verify-box" style="margin-top:24px;">
+      <div class="email-verify-header">
+        <div class="email-verify-title">
+          <span>✉</span> Email Authentication <span class="req">*</span>
+        </div>
+        <span class="email-badge email-badge-pending">&#9679; Verification Required</span>
+      </div>
+      <div class="email-verify-desc">
+        Please authenticate your email address:
+        <span class="email-display-pill">${escapeHtml(email)}</span>
+      </div>
+
+      ${!ev.otpSent ? `
+        <div style="margin-top:10px;">
+          <button class="btn btn-gold" data-action="send-guest-email-otp" ${ev.sending ? 'disabled' : ''} style="font-weight:600;">
+            ${ev.sending ? '<span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> Sending Code via Brevo...' : '✉ Send Verification Code'}
+          </button>
+          <div class="hint" style="margin-top:6px;">A single-use 6-digit verification code will be sent to <strong>${escapeHtml(email)}</strong> via Brevo.</div>
+        </div>
+      ` : `
+        <div style="margin-top:12px;padding:14px;background:#F8F5EE;border-radius:6px;border:1px dashed var(--border);">
+          <div style="font-size:0.86rem;font-weight:600;color:var(--navy);margin-bottom:6px;">
+            Enter 6-Digit Code sent to ${escapeHtml(email)}:
+          </div>
+          <div class="otp-input-wrap">
+            <input type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" class="otp-code-input" data-bind-guest-otp value="${escapeHtml(ev.inputCode || '')}" placeholder="------">
+            <button class="btn btn-gold" data-action="verify-guest-email-otp" ${ev.verifying ? 'disabled' : ''} style="font-weight:600;">
+              ${ev.verifying ? 'Checking...' : 'Confirm Code &rarr;'}
+            </button>
+            ${ev.resendCooldown > 0 ? `
+              <span style="font-size:0.82rem;color:var(--muted);margin-left:6px;">Resend in ${ev.resendCooldown}s</span>
+            ` : `
+              <button class="btn btn-outline btn-sm" data-action="send-guest-email-otp" ${ev.sending ? 'disabled' : ''}>
+                ${ev.sending ? 'Sending...' : 'Resend Code'}
+              </button>
+            `}
+          </div>
+          <div class="hint" style="margin-top:6px;">Valid for 10 minutes. If you do not receive it promptly, check your spam or junk folder.</div>
+        </div>
+      `}
+
+      ${ev.error ? `<div class="err" style="margin-top:10px;font-weight:500;">${escapeHtml(ev.error)}</div>` : ''}
+    </div>`;
     }
 
     function errGuest(field) {
@@ -1738,6 +2040,10 @@
       document.querySelectorAll("[data-bind-guest]").forEach(el => {
         setDeepValue(guestDraft, el.getAttribute("data-bind-guest"), el.value.trim());
       });
+      const firmOtp = document.querySelector("[data-bind-firm-otp]");
+      if (firmOtp) firmDraft.emailVerification.inputCode = firmOtp.value.trim();
+      const guestOtp = document.querySelector("[data-bind-guest-otp]");
+      if (guestOtp) guestDraft.emailVerification.inputCode = guestOtp.value.trim();
     }
 
     /* ---------------- Form Validation Logic ---------------- */
@@ -1863,7 +2169,35 @@
       // Firm input bindings
       app.querySelectorAll("[data-bind-firm]").forEach(el => {
         el.addEventListener("input", (e) => {
-          setDeepValue(firmDraft, el.getAttribute("data-bind-firm"), e.target.value);
+          const bindPath = el.getAttribute("data-bind-firm");
+          setDeepValue(firmDraft, bindPath, e.target.value);
+          if (bindPath === "contact.email") {
+            const curVal = (e.target.value || "").trim().toLowerCase();
+            if (firmDraft.emailVerification.verified && firmDraft.emailVerification.verifiedEmail.toLowerCase() !== curVal) {
+              firmDraft.emailVerification.verified = false;
+              firmDraft.emailVerification.otpSent = false;
+              firmDraft.emailVerification.verifiedEmail = "";
+              firmDraft.emailVerification.code = "";
+              firmDraft.emailVerification.inputCode = "";
+              firmDraft.emailVerification.error = "";
+            }
+          }
+        });
+      });
+
+      // Firm OTP input bindings
+      app.querySelectorAll("[data-bind-firm-otp]").forEach(el => {
+        el.addEventListener("input", (e) => {
+          const clean = e.target.value.replace(/\D/g, "").slice(0, 6);
+          firmDraft.emailVerification.inputCode = clean;
+          e.target.value = clean;
+        });
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const verifyBtn = app.querySelector('[data-action="verify-firm-email-otp"]');
+            if (verifyBtn) verifyBtn.click();
+          }
         });
       });
 
@@ -1951,7 +2285,35 @@
       // Guest input bindings
       app.querySelectorAll("[data-bind-guest]").forEach(el => {
         el.addEventListener("input", (e) => {
-          setDeepValue(guestDraft, el.getAttribute("data-bind-guest"), e.target.value);
+          const bindPath = el.getAttribute("data-bind-guest");
+          setDeepValue(guestDraft, bindPath, e.target.value);
+          if (bindPath === "email") {
+            const curVal = (e.target.value || "").trim().toLowerCase();
+            if (guestDraft.emailVerification.verified && guestDraft.emailVerification.verifiedEmail.toLowerCase() !== curVal) {
+              guestDraft.emailVerification.verified = false;
+              guestDraft.emailVerification.otpSent = false;
+              guestDraft.emailVerification.verifiedEmail = "";
+              guestDraft.emailVerification.code = "";
+              guestDraft.emailVerification.inputCode = "";
+              guestDraft.emailVerification.error = "";
+            }
+          }
+        });
+      });
+
+      // Guest OTP input bindings
+      app.querySelectorAll("[data-bind-guest-otp]").forEach(el => {
+        el.addEventListener("input", (e) => {
+          const clean = e.target.value.replace(/\D/g, "").slice(0, 6);
+          guestDraft.emailVerification.inputCode = clean;
+          e.target.value = clean;
+        });
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const verifyBtn = app.querySelector('[data-action="verify-guest-email-otp"]');
+            if (verifyBtn) verifyBtn.click();
+          }
         });
       });
 
@@ -2090,6 +2452,218 @@
           window.downloadVendorPdf(lastSubmission);
         }
       }
+      else if (action === "goto-firm-step") {
+        const stepNum = parseInt(el.getAttribute("data-step"), 10) || 1;
+        firmDraft.step = stepNum;
+        window.scrollTo(0, 0);
+        render();
+      }
+      else if (action === "send-firm-email-otp") {
+        syncDomInputs();
+        const email = (firmDraft.contact.email || "").trim();
+        if (!email || !RE_EMAIL.test(email)) {
+          pushToast("Please enter a valid email address in Section 2 (Contact Person Details).", "error");
+          return;
+        }
+
+        const ev = firmDraft.emailVerification;
+        if (ev.resendCooldown > 0) return;
+
+        ev.sending = true;
+        ev.error = "";
+        render();
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+        try {
+          if (!window.DevkaCloud || typeof window.DevkaCloud.sendEmailVerificationOtp !== "function") {
+            throw new Error("Cloud email service is not loaded.");
+          }
+          await window.DevkaCloud.sendEmailVerificationOtp(email, firmDraft.contact.personName, code);
+          ev.otpSent = true;
+          ev.code = code;
+          ev.expiresAt = Date.now() + 10 * 60 * 1000;
+          ev.resendCooldown = 30;
+          ev.inputCode = "";
+          ev.sending = false;
+          ev.error = "";
+          pushToast(`Verification code sent to ${email}`, "success");
+
+          if (window._firmCooldownInterval) clearInterval(window._firmCooldownInterval);
+          window._firmCooldownInterval = setInterval(() => {
+            if (firmDraft.emailVerification.resendCooldown > 0) {
+              firmDraft.emailVerification.resendCooldown--;
+              const span = document.querySelector("#email-verify-box .otp-input-wrap span");
+              if (span && span.textContent.startsWith("Resend in")) {
+                span.textContent = `Resend in ${firmDraft.emailVerification.resendCooldown}s`;
+              }
+            } else {
+              clearInterval(window._firmCooldownInterval);
+              render();
+            }
+          }, 1000);
+
+          render();
+          const inp = document.querySelector("[data-bind-firm-otp]");
+          if (inp) inp.focus();
+        } catch (err) {
+          console.error("Brevo verification send error:", err);
+          ev.sending = false;
+          ev.error = err.message || "Failed to dispatch verification email.";
+          pushToast(`Email sending failed: ${ev.error}`, "error");
+          render();
+        }
+      }
+      else if (action === "verify-firm-email-otp") {
+        syncDomInputs();
+        const ev = firmDraft.emailVerification;
+        const email = (firmDraft.contact.email || "").trim();
+        const entered = (ev.inputCode || "").trim();
+
+        if (!entered) {
+          ev.error = "Please enter the 6-digit verification code.";
+          render();
+          return;
+        }
+
+        if (Date.now() > ev.expiresAt) {
+          ev.error = "Verification code has expired. Please click Resend Code.";
+          render();
+          pushToast(ev.error, "error");
+          return;
+        }
+
+        if (entered === ev.code) {
+          ev.verified = true;
+          ev.verifiedEmail = email;
+          ev.verifiedAt = Date.now();
+          ev.error = "";
+          if (window._firmCooldownInterval) clearInterval(window._firmCooldownInterval);
+          pushToast("Contact person email authenticated successfully!", "success");
+          render();
+        } else {
+          ev.error = "Incorrect verification code. Please check your email and try again.";
+          pushToast("Incorrect verification code", "error");
+          render();
+          const inp = document.querySelector("[data-bind-firm-otp]");
+          if (inp) {
+            inp.focus();
+            inp.select();
+          }
+        }
+      }
+      else if (action === "reset-firm-email-otp") {
+        firmDraft.emailVerification.verified = false;
+        firmDraft.emailVerification.otpSent = false;
+        firmDraft.emailVerification.code = "";
+        firmDraft.emailVerification.inputCode = "";
+        firmDraft.emailVerification.verifiedEmail = "";
+        firmDraft.emailVerification.error = "";
+        render();
+      }
+      else if (action === "send-guest-email-otp") {
+        syncDomInputs();
+        const email = (guestDraft.email || "").trim();
+        if (!email || !RE_EMAIL.test(email)) {
+          pushToast("Please enter a valid email address in Section 1 (Personal Information).", "error");
+          return;
+        }
+
+        const ev = guestDraft.emailVerification;
+        if (ev.resendCooldown > 0) return;
+
+        ev.sending = true;
+        ev.error = "";
+        render();
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+        try {
+          if (!window.DevkaCloud || typeof window.DevkaCloud.sendEmailVerificationOtp !== "function") {
+            throw new Error("Cloud email service is not loaded.");
+          }
+          await window.DevkaCloud.sendEmailVerificationOtp(email, guestDraft.fullName, code);
+          ev.otpSent = true;
+          ev.code = code;
+          ev.expiresAt = Date.now() + 10 * 60 * 1000;
+          ev.resendCooldown = 30;
+          ev.inputCode = "";
+          ev.sending = false;
+          ev.error = "";
+          pushToast(`Verification code sent to ${email}`, "success");
+
+          if (window._guestCooldownInterval) clearInterval(window._guestCooldownInterval);
+          window._guestCooldownInterval = setInterval(() => {
+            if (guestDraft.emailVerification.resendCooldown > 0) {
+              guestDraft.emailVerification.resendCooldown--;
+              const span = document.querySelector("#guest-email-verify-box .otp-input-wrap span");
+              if (span && span.textContent.startsWith("Resend in")) {
+                span.textContent = `Resend in ${guestDraft.emailVerification.resendCooldown}s`;
+              }
+            } else {
+              clearInterval(window._guestCooldownInterval);
+              render();
+            }
+          }, 1000);
+
+          render();
+          const inp = document.querySelector("[data-bind-guest-otp]");
+          if (inp) inp.focus();
+        } catch (err) {
+          console.error("Brevo guest verification send error:", err);
+          ev.sending = false;
+          ev.error = err.message || "Failed to dispatch verification email.";
+          pushToast(`Email sending failed: ${ev.error}`, "error");
+          render();
+        }
+      }
+      else if (action === "verify-guest-email-otp") {
+        syncDomInputs();
+        const ev = guestDraft.emailVerification;
+        const email = (guestDraft.email || "").trim();
+        const entered = (ev.inputCode || "").trim();
+
+        if (!entered) {
+          ev.error = "Please enter the 6-digit verification code.";
+          render();
+          return;
+        }
+
+        if (Date.now() > ev.expiresAt) {
+          ev.error = "Verification code has expired. Please click Resend Code.";
+          render();
+          pushToast(ev.error, "error");
+          return;
+        }
+
+        if (entered === ev.code) {
+          ev.verified = true;
+          ev.verifiedEmail = email;
+          ev.verifiedAt = Date.now();
+          ev.error = "";
+          if (window._guestCooldownInterval) clearInterval(window._guestCooldownInterval);
+          pushToast("Email authenticated successfully!", "success");
+          render();
+        } else {
+          ev.error = "Incorrect verification code. Please check your email and try again.";
+          pushToast("Incorrect verification code", "error");
+          render();
+          const inp = document.querySelector("[data-bind-guest-otp]");
+          if (inp) {
+            inp.focus();
+            inp.select();
+          }
+        }
+      }
+      else if (action === "reset-guest-email-otp") {
+        guestDraft.emailVerification.verified = false;
+        guestDraft.emailVerification.otpSent = false;
+        guestDraft.emailVerification.code = "";
+        guestDraft.emailVerification.inputCode = "";
+        guestDraft.emailVerification.verifiedEmail = "";
+        guestDraft.emailVerification.error = "";
+        render();
+      }
       else if (action === "submit-firm") {
         syncDomInputs();
 
@@ -2103,7 +2677,19 @@
           return;
         }
 
-        // 2. Verify Step 8 declarations
+        // 2. Verify Contact Person Email Authentication via Brevo
+        const contactEmail = (firmDraft.contact.email || "").trim().toLowerCase();
+        const ev = firmDraft.emailVerification;
+        if (!ev.verified || !ev.verifiedEmail || ev.verifiedEmail.toLowerCase() !== contactEmail) {
+          ev.error = "Please authenticate your contact person email before submitting.";
+          render();
+          pushToast("Email authentication required: Please verify your contact email.", "error");
+          const box = document.getElementById("email-verify-box");
+          if (box) box.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+
+        // 3. Verify Step 7 declarations
         const declErrors = {};
         if (!firmDraft.declarationAccepted) {
           declErrors["declarationAccepted"] = "Please confirm the declaration to proceed.";
@@ -2118,7 +2704,7 @@
           return;
         }
 
-        // 3. Button feedback
+        // 4. Button feedback
         const btn = document.getElementById("btn-submit-firm") || el;
         if (btn) {
           btn.disabled = true;
@@ -2132,11 +2718,17 @@
             type: "firm",
             status: "Submitted",
             submittedAt: Date.now(),
+            emailVerified: true,
+            emailVerifiedAt: ev.verifiedAt || Date.now(),
             company: {
               ...firmDraft.company,
               companyName: firmDraft.company.legalName
             },
-            contact: firmDraft.contact,
+            contact: {
+              ...firmDraft.contact,
+              emailVerified: true,
+              emailVerifiedAt: ev.verifiedAt || Date.now()
+            },
             bank: firmDraft.bank,
             documents: firmDraft.documents,
             billing: firmDraft.billing,
@@ -2160,6 +2752,18 @@
         syncDomInputs();
         if (!validateGuestForm()) return;
 
+        // Verify Guest Email Authentication via Brevo
+        const guestEmail = (guestDraft.email || "").trim().toLowerCase();
+        const gev = guestDraft.emailVerification;
+        if (!gev.verified || !gev.verifiedEmail || gev.verifiedEmail.toLowerCase() !== guestEmail) {
+          gev.error = "Please authenticate your email address before submitting.";
+          render();
+          pushToast("Email authentication required: Please verify your email address.", "error");
+          const box = document.getElementById("guest-email-verify-box");
+          if (box) box.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+
         const btn = el;
         if (btn) {
           btn.disabled = true;
@@ -2173,10 +2777,14 @@
             type: "guest",
             status: "Submitted",
             submittedAt: Date.now(),
+            emailVerified: true,
+            emailVerifiedAt: gev.verifiedAt || Date.now(),
             guest: {
               fullName: guestDraft.fullName,
               mobile: guestDraft.mobile,
               email: guestDraft.email,
+              emailVerified: true,
+              emailVerifiedAt: gev.verifiedAt || Date.now(),
               address: guestDraft.address,
               city: guestDraft.city,
               state: guestDraft.state,
