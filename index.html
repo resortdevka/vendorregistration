@@ -1,0 +1,2240 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Devka Beach Resort — Vendor Registration Portal</title>
+  <link rel="icon" type="image/png" href="LOGO.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root {
+      --navy: #0B1F3A;
+      --navy-deep: #071527;
+      --navy-soft: #122A4D;
+      --gold: #C6A15B;
+      --gold-soft: #E4D3A6;
+      --gold-dim: #9c814a;
+      --gold-light: #F7F2E7;
+      --cream: #F8F5EE;
+      --white: #FFFFFF;
+      --ink: #17222E;
+      --muted: #5B6B7C;
+      --success: #2F6F4E;
+      --success-bg: #EAF3EC;
+      --error: #A63A2C;
+      --error-bg: #FBEAE6;
+      --border: #E3DCC9;
+      --border-light: #ECE7D8;
+      --shadow: 0 10px 30px rgba(11, 31, 58, 0.08);
+      --shadow-lg: 0 18px 45px rgba(11, 31, 58, 0.12);
+      --radius: 8px;
+      --radius-sm: 4px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      margin: 0;
+      color: var(--navy);
+      letter-spacing: -0.01em;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    input,
+    select,
+    textarea {
+      font-family: inherit;
+      font-size: 0.92rem;
+    }
+
+    ::selection {
+      background: var(--gold-soft);
+    }
+
+    /* ---------- Layout shell ---------- */
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: var(--navy);
+      color: var(--cream);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid rgba(198, 161, 91, 0.35);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--white);
+      padding: 2px;
+      object-fit: contain;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1.5px var(--gold);
+      flex-shrink: 0;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .brand:hover .brand-logo {
+      transform: scale(1.05);
+      box-shadow: 0 4px 14px rgba(198, 161, 91, 0.4), 0 0 0 2px var(--gold-soft);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .brand-text strong {
+      font-family: 'Fraunces', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .brand-text span {
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      color: var(--gold-soft);
+    }
+
+    .topbar-links {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.86rem;
+      font-weight: 600;
+      transition: all .15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-gold {
+      background: var(--gold);
+      color: var(--navy-deep);
+    }
+
+    .btn-gold:hover {
+      background: var(--gold-soft);
+      transform: translateY(-1px);
+    }
+
+    .btn-gold:disabled {
+      background: #d9cfb4;
+      color: #8a7e5f;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: rgba(248, 245, 238, 0.4);
+      color: var(--cream);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--gold-soft);
+      color: var(--gold-soft);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border-color: var(--navy);
+      color: var(--navy);
+    }
+
+    .btn-outline:hover {
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    .btn-outline:disabled {
+      border-color: #c9c2ad;
+      color: #a29c86;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      background: transparent;
+      border-color: var(--error);
+      color: var(--error);
+    }
+
+    .btn-danger:hover {
+      background: var(--error);
+      color: var(--white);
+    }
+
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 0.8rem;
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    main {
+      flex: 1;
+    }
+
+    footer {
+      background: var(--navy-deep);
+      color: rgba(248, 245, 238, 0.65);
+      text-align: center;
+      padding: 22px;
+      font-size: 0.8rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* ---------- Home / Hero (Full-screen background photo — matches index.html) ---------- */
+    .hero {
+      position: relative;
+      height: 100svh;
+      min-height: 580px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      color: var(--cream);
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background-image: url('dbr image.JPG');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      z-index: 0;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, rgba(7,21,39,0.84) 0%, rgba(7,21,39,0.70) 55%, rgba(7,21,39,0.90) 100%);
+      z-index: 1;
+    }
+
+    .hero-wrap {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 40px 28px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .hero-logo-badge {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: var(--white);
+      padding: 8px;
+      margin: 0 auto 22px;
+      box-shadow: 0 10px 35px rgba(7,21,39,0.5), 0 0 0 2.5px var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .25s ease;
+    }
+
+    .hero-logo-badge:hover { transform: scale(1.04); }
+
+    .hero-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.76rem;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      color: var(--gold-soft);
+      margin-bottom: 10px;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.2;
+      text-shadow: 0 2px 14px rgba(0,0,0,0.4);
+      margin-bottom: 10px;
+    }
+
+    .hero-subtitle {
+      font-size: 0.91rem;
+      color: rgba(248,245,238,0.8);
+      margin-bottom: 34px;
+      line-height: 1.6;
+    }
+
+    .hero-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .hero-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 15px 28px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.96rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all .2s ease;
+      text-decoration: none;
+    }
+
+    .hero-btn-primary {
+      background: var(--gold);
+      color: var(--navy-deep);
+      box-shadow: 0 6px 20px rgba(198,161,91,0.3);
+    }
+
+    .hero-btn-primary:hover {
+      background: var(--gold-soft);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(198,161,91,0.4);
+    }
+
+    .hero-btn-secondary {
+      background: rgba(255,255,255,0.08);
+      color: var(--cream);
+      border: 1.5px solid rgba(198,161,91,0.4);
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-btn-secondary:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: var(--gold-soft);
+      transform: translateY(-2px);
+    }
+
+    .hero-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 2px 0;
+      color: rgba(248,245,238,0.3);
+      font-size: 0.78rem;
+    }
+
+    .hero-divider::before,
+    .hero-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(198,161,91,0.2);
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ---------- Content shells ---------- */
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 34px 24px 70px;
+    }
+
+    .shell-narrow {
+      max-width: 780px;
+    }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card-pad {
+      padding: 32px 30px;
+    }
+
+    @media(max-width:600px) {
+      .card-pad {
+        padding: 22px 18px;
+      }
+    }
+
+    /* Stepper */
+    .wizard-layout {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      gap: 28px;
+    }
+
+    @media(max-width:860px) {
+      .wizard-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stepper {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    @media(max-width:860px) {
+      .stepper {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 0;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+      }
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      color: var(--muted);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .step-item .dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+      color: var(--muted);
+    }
+
+    .step-item.active {
+      color: var(--navy);
+      font-weight: 600;
+      background: var(--cream);
+    }
+
+    .step-item.active .dot {
+      border-color: var(--gold);
+      color: var(--navy);
+      background: var(--gold-soft);
+    }
+
+    .step-item.done .dot {
+      border-color: var(--success);
+      background: var(--success);
+      color: var(--white);
+    }
+
+    .step-item.done {
+      color: var(--navy);
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      margin-bottom: 4px;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 24px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+    }
+
+    @media(max-width:600px) {
+      .field-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .field label .opt {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+
+    .field input[type=text],
+    .field input[type=email],
+    .field input[type=tel],
+    .field input[type=number],
+    .field input[type=password],
+    .field select,
+    .field textarea {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--white);
+      color: var(--ink);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 0 3px rgba(198, 161, 91, 0.14);
+    }
+
+    .field input:disabled,
+    .field select:disabled {
+      background: #f4f2ec;
+      color: #7d786c;
+      cursor: not-allowed;
+    }
+
+    .field .hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .field .err {
+      font-size: 0.76rem;
+      color: var(--error);
+      font-weight: 500;
+    }
+
+    .req {
+      color: var(--error);
+    }
+
+    .inline-verify {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .inline-verify input {
+      flex: 1;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    .badge-success {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid #c2e2cc;
+    }
+
+    .badge-error {
+      background: var(--error-bg);
+      color: var(--error);
+      border: 1px solid #f7c7c0;
+    }
+
+    .badge-pending {
+      background: #F3EEE0;
+      color: var(--gold-dim);
+      border: 1px solid var(--gold-soft);
+    }
+
+    .verification-card {
+      margin-top: 14px;
+      background: var(--success-bg);
+      border: 1px solid #cfe4d6;
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      font-size: 0.85rem;
+      animation: fadein .2s ease;
+    }
+
+    @keyframes fadein {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .verification-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 20px;
+      margin-top: 10px;
+    }
+
+    @media(max-width:600px) {
+      .verification-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .verification-grid div span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .verification-grid div strong {
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .autofill-banner {
+      background: #F5EFE1;
+      border: 1px solid var(--gold);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: var(--navy);
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .doc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media(max-width:700px) {
+      .doc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .doc-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      background: var(--white);
+    }
+
+    .doc-item .doc-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .doc-item .doc-file-name {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .doc-upload-btn {
+      margin-top: 10px;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      display: block;
+      cursor: pointer;
+      background: #FAFAF7;
+      transition: all .15s;
+    }
+
+    .doc-upload-btn:hover {
+      border-color: var(--gold-dim);
+      color: var(--navy);
+      background: var(--white);
+    }
+
+    /* Photo preview box for guest */
+    .photo-preview-box {
+      width: 120px;
+      height: 120px;
+      border-radius: var(--radius);
+      border: 2px dashed var(--border);
+      background: #FAFAF7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      margin-top: 8px;
+    }
+
+    .photo-preview-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .radio-row {
+      display: flex;
+      gap: 22px;
+      flex-wrap: wrap;
+    }
+
+    .radio-opt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .radio-opt input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--gold-dim);
+    }
+
+    .chip-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 9px 16px;
+      font-size: 0.84rem;
+      cursor: pointer;
+      background: var(--white);
+      color: var(--ink);
+      transition: all .15s;
+      user-select: none;
+    }
+
+    .chip.selected {
+      background: var(--navy);
+      border-color: var(--navy);
+      color: var(--white);
+    }
+
+    .subblock {
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 18px;
+      margin-top: 14px;
+      background: #FBFAF6;
+    }
+
+    .declaration-box {
+      border: 1px solid var(--border);
+      background: #FBFAF6;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .accept-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    .accept-row input {
+      margin-top: 3px;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      accent-color: var(--gold-dim);
+    }
+
+    .wizard-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 28px;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Confirmation */
+    .confirm-wrap {
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    .confirm-logo-badge {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: var(--white);
+      padding: 8px;
+      margin: 0 auto 16px;
+      box-shadow: 0 6px 20px rgba(11, 31, 58, 0.1), 0 0 0 2px var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .confirm-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--success-bg);
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 1.6rem;
+    }
+
+    .vendor-id-box {
+      display: inline-block;
+      margin: 20px 0;
+      padding: 14px 26px;
+      border: 1.5px dashed var(--gold);
+      border-radius: var(--radius-sm);
+      font-family: 'Fraunces', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--navy);
+      letter-spacing: 0.03em;
+      background: var(--cream);
+    }
+
+    /* Toasts */
+    .toast-wrap {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 340px;
+    }
+
+    .toast {
+      background: var(--navy);
+      color: var(--cream);
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+      font-size: 0.85rem;
+      border-left: 4px solid var(--gold);
+      animation: slidein .2s ease;
+    }
+
+    .toast.error {
+      border-left-color: var(--error);
+    }
+
+    .toast.success {
+      border-left-color: var(--success);
+    }
+
+    @keyframes slidein {
+      from {
+        transform: translateX(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="devka-config.js?v=2.1"></script>
+  <script src="vendor-db.js?v=2.1"></script>
+  <script>
+    /* =========================================================================
+       DEVKA BEACH RESORT — VENDOR REGISTRATION PORTAL
+       Features:
+       - Separate Firm / Company and Guest Vendor registration pathways
+       - NO OTP authentication anywhere (Smooth normal submit)
+       - Live GST Check with complete auto-fill of firm name and registered address
+       - Real-time PAN Card verification API validation
+       - Guest Vendor Registration with Aadhaar card number, photo upload, and Aadhaar document
+       - Full base64 file data storage connecting to Admin Vendor folder interface
+       ========================================================================= */
+
+    const MANDATORY_DOCS = [
+      { key: "gst_certificate", label: "GST Certificate" },
+      { key: "pan_card", label: "PAN Card" },
+      { key: "cancelled_cheque", label: "Cancelled Cheque" },
+      { key: "bank_statement", label: "Bank Passbook / Statement" }
+    ];
+    const OPTIONAL_DOCS = [
+      { key: "msme_cert", label: "MSME Certificate" }
+    ];
+
+    const STATE_CODE_MAP = { "01": "Jammu and Kashmir", "02": "Himachal Pradesh", "03": "Punjab", "04": "Chandigarh", "05": "Uttarakhand", "06": "Haryana", "07": "Delhi", "08": "Rajasthan", "09": "Uttar Pradesh", "10": "Bihar", "11": "Sikkim", "12": "Arunachal Pradesh", "13": "Nagaland", "14": "Manipur", "15": "Mizoram", "16": "Tripura", "17": "Meghalaya", "18": "Assam", "19": "West Bengal", "20": "Jharkhand", "21": "Odisha", "22": "Chhattisgarh", "23": "Madhya Pradesh", "24": "Gujarat", "25": "Daman and Diu", "26": "Dadra and Nagar Haveli", "27": "Maharashtra", "29": "Karnataka", "30": "Goa", "31": "Lakshadweep", "32": "Kerala", "33": "Tamil Nadu", "34": "Puducherry", "36": "Telangana", "37": "Andhra Pradesh", "38": "Ladakh" };
+
+    const IFSC_BANK_MAP = {
+      "SBIN": "State Bank of India", "HDFC": "HDFC Bank", "ICIC": "ICICI Bank", "PUNB": "Punjab National Bank",
+      "UTIB": "Axis Bank", "KKBK": "Kotak Mahindra Bank", "IDIB": "Indian Bank", "BARB": "Bank of Baroda",
+      "YESB": "Yes Bank", "INDB": "IndusInd Bank", "CNRB": "Canara Bank", "UBIN": "Union Bank of India"
+    };
+
+    /* ---------------- Global App State ---------------- */
+    let route = "home"; // 'home' | 'firm-register' | 'guest-register' | 'confirmation'
+    let lastSubmission = null;
+    let toasts = [];
+
+    // Firm Draft
+    let firmDraft = freshFirmDraft();
+    function freshFirmDraft() {
+      return {
+        step: 1,
+        company: {
+          legalName: "",
+          gst: "",
+          pan: "",
+          address: "",
+          city: "",
+          state: "",
+          pincode: "",
+          country: "India"
+        },
+        contact: {
+          personName: "", designation: "", mobile: "", altMobile: "", email: "",
+          accPersonName: "", accMobile: "", accEmail: ""
+        },
+        bank: {
+          holderName: "", bankName: "", accNumber: "", accNumberConfirm: "", ifsc: ""
+        },
+        documents: {}, // stores { name, size, type, data: base64 }
+        billing: {
+          gstOnInvoice: "",
+          liquorGstRequired: "",
+          liquorGstNumber: "",
+          liquorBillGst: ""
+        },
+        payment: { method: "", creditPeriod: "" },
+        declarationAccepted: false,
+        termsAccepted: false,
+        errors: {}
+      };
+    }
+
+    // Guest Draft
+    let guestDraft = freshGuestDraft();
+    function freshGuestDraft() {
+      return {
+        fullName: "",
+        mobile: "",
+        email: "",
+        address: "",
+        city: "",
+        state: "",
+        pincode: "",
+        aadhaar: "",
+        serviceType: "",
+        notes: "",
+        bank: {
+          holderName: "", bankName: "", accNumber: "", ifsc: ""
+        },
+        documents: {}, // aadhaar_doc, guest_photo
+        declarationAccepted: false,
+        errors: {}
+      };
+    }
+
+    const FIRM_STEP_LABELS = [
+      "Company, GST & PAN", "Contact Person", "Bank Details",
+      "Documents", "Billing Preferences", "Payment Terms", "Declaration"
+    ];
+
+    /* ---------------- Toast notifications ---------------- */
+    function pushToast(msg, type = "neutral") {
+      const id = Date.now() + Math.random();
+      toasts.push({ id, msg, type });
+      render();
+      setTimeout(() => { toasts = toasts.filter(t => t.id !== id); render(); }, 4000);
+    }
+
+    function renderToasts() {
+      if (!toasts.length) return "";
+      return `<div class="toast-wrap">${toasts.map(t => `<div class="toast ${t.type}">${escapeHtml(t.msg)}</div>`).join("")}</div>`;
+    }
+
+    function go(targetRoute, data = null) {
+      route = targetRoute;
+      if (data) lastSubmission = data;
+      window.scrollTo(0, 0);
+      render();
+    }
+
+    /* Format Validators */
+    const RE_GST = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    const RE_PAN = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    const RE_IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const RE_MOBILE = /^[6-9][0-9]{9}$/;
+    const RE_PIN = /^[1-9][0-9]{5}$/;
+    const RE_AADHAAR = /^[2-9]{1}[0-9]{3}\s?[0-9]{4}\s?[0-9]{4}$/;
+
+    /* ---------------- Root Render ---------------- */
+    function render() {
+      const app = document.getElementById("app");
+      app.innerHTML = `
+    ${renderTopbar()}
+    <main>${renderRoute()}</main>
+    <footer>Devka Beach Resort · Vendor Registration Portal</footer>
+    ${renderToasts()}
+  `;
+      attachEvents();
+    }
+
+    function renderTopbar() {
+      return `
+  <header class="topbar">
+    <div class="brand" data-action="nav-home">
+      <img src="LOGO.png" alt="Devka Beach Resort" class="brand-logo" />
+      <div class="brand-text">
+        <strong>Devka Beach Resort</strong>
+        <span>VENDOR REGISTRATION PORTAL</span>
+      </div>
+    </div>
+    <div class="topbar-links">
+      <button class="btn btn-ghost btn-sm" data-action="nav-home">Home</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--cream);border-color:rgba(255,255,255,0.4);" data-action="start-guest">Guest Registration</button>
+      <button class="btn btn-gold btn-sm" data-action="start-firm">Company Registration</button>
+    </div>
+  </header>`;
+    }
+
+    function renderRoute() {
+      switch (route) {
+        case "home": return renderHome();
+        case "firm-register": return renderFirmWizard();
+        case "guest-register": return renderGuestForm();
+        case "confirmation": return renderConfirmation();
+        default: return renderHome();
+      }
+    }
+
+    /* ---------------- Home Page ---------------- */
+    function renderHome() {
+      return `
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-wrap">
+      <div class="hero-logo-badge">
+        <img src="LOGO.png" alt="Devka Beach Resort" class="hero-logo-img" />
+      </div>
+      <div class="hero-eyebrow">DEVKA BEACH RESORT &middot; DAMAN</div>
+      <h1>Connect with Devka Beach Resort</h1>
+      <p class="hero-subtitle">Official onboarding portal. Register yourself with Us.</p>
+      <div class="hero-btn-group">
+        <button class="hero-btn hero-btn-primary" data-action="start-firm">&#128203;&nbsp; Register as a Company / Firm</button>
+        <div class="hero-divider">or</div>
+        <button class="hero-btn hero-btn-secondary" data-action="start-guest">&#128100;&nbsp; Register as Guest Vendor</button>
+      </div>
+    </div>
+  </section>`;
+    }
+
+    /* ---------------- FIRM / COMPANY REGISTRATION WIZARD ---------------- */
+    function renderFirmWizard() {
+      return `
+  <div class="shell">
+    <div class="wizard-layout">
+      <div class="stepper">
+        ${FIRM_STEP_LABELS.map((label, i) => {
+        const n = i + 1;
+        const cls = n === firmDraft.step ? "active" : (n < firmDraft.step ? "done" : "");
+        return `
+            <div class="step-item ${cls}" data-firm-step="${n}">
+              <span class="dot">${n < firmDraft.step ? "&#10003;" : n}</span>
+              <span>${label}</span>
+            </div>`;
+      }).join("")}
+      </div>
+      <div class="card card-pad">
+        ${renderFirmStep()}
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function renderFirmStep() {
+      switch (firmDraft.step) {
+        case 1: return stepFirmCompanyGstPan();
+        case 2: return stepFirmContact();
+        case 3: return stepFirmBank();
+        case 4: return stepFirmDocuments();
+        case 5: return stepFirmBilling();
+        case 6: return stepFirmPayment();
+        case 7: return stepFirmDeclaration();
+        default: return "";
+      }
+    }
+
+    // Firm Step 1: Company Registered Name, GST, PAN & Address
+    function stepFirmCompanyGstPan() {
+      const c = firmDraft.company;
+      return `
+  <div class="section-title">Company Registration Details</div>
+  <div class="section-sub">Section 1 of 8 — Enter your legal company registered name, tax numbers, and official registration address.</div>
+
+  <!-- 1. Company Register Name on the Top -->
+  <div class="field">
+    <label>Legal Company Registered Name <span class="req">*</span></label>
+    <input type="text" data-bind-firm="company.legalName" value="${escapeHtml(c.legalName)}" placeholder="e.g. Acme Hospitality Solutions Private Limited">
+    ${errFirm("company.legalName")}
+  </div>
+
+  <!-- 2. GST Number -->
+  <div class="field">
+    <label>GST Number <span class="req">*</span></label>
+    <input type="text" maxlength="15" style="text-transform:uppercase;font-weight:600;letter-spacing:1px;" data-bind-firm="company.gst" value="${escapeHtml(c.gst)}" placeholder="e.g. 24AAACG1234F1Z5">
+    <div class="hint">Enter 15-character official GSTIN.</div>
+    ${errFirm("company.gst")}
+  </div>
+
+  <!-- 3. PAN Card Number -->
+  <div class="field">
+    <label>PAN Card Number <span class="req">*</span></label>
+    <input type="text" maxlength="10" style="text-transform:uppercase;font-weight:600;letter-spacing:1px;" data-bind-firm="company.pan" value="${escapeHtml(c.pan)}" placeholder="e.g. AAACG1234F">
+    <div class="hint">Enter 10-character Income Tax PAN.</div>
+    ${errFirm("company.pan")}
+  </div>
+
+  <!-- 4. Company Registered Address -->
+  <div class="field">
+    <label>Company Registered Address <span class="req">*</span></label>
+    <textarea rows="2" data-bind-firm="company.address" placeholder="Premises, building, street, industrial estate">${escapeHtml(c.address)}</textarea>
+    ${errFirm("company.address")}
+  </div>
+
+  <div class="field-grid">
+    <div class="field">
+      <label>City <span class="req">*</span></label>
+      <input type="text" data-bind-firm="company.city" value="${escapeHtml(c.city)}" placeholder="e.g. Daman / Vapi">
+      ${errFirm("company.city")}
+    </div>
+    <div class="field">
+      <label>State <span class="req">*</span></label>
+      <input type="text" data-bind-firm="company.state" value="${escapeHtml(c.state)}" placeholder="e.g. Daman & Diu / Gujarat">
+      ${errFirm("company.state")}
+    </div>
+    <div class="field">
+      <label>Pincode <span class="req">*</span></label>
+      <input type="text" maxlength="6" data-bind-firm="company.pincode" value="${escapeHtml(c.pincode)}" placeholder="6-digit PIN">
+      ${errFirm("company.pincode")}
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-outline" data-action="nav-home">&larr; Return Home</button>
+    <button class="btn btn-gold" data-action="firm-next">Continue to Contact Details &rarr;</button>
+  </div>
+  `;
+    }
+
+    // Firm Step 2: Contact Person (NO OTP!)
+    function stepFirmContact() {
+      const ct = firmDraft.contact;
+      return `
+  <div class="section-title">Contact Person Details</div>
+  <div class="section-sub">Section 2 of 8 — Contact details for the resort procurement department. (No OTP required).</div>
+
+  <div class="field-grid">
+    <div class="field">
+      <label>Contact Person Name <span class="req">*</span></label>
+      <input type="text" data-bind-firm="contact.personName" value="${escapeHtml(ct.personName)}" placeholder="Full name of representative">
+      ${errFirm("contact.personName")}
+    </div>
+    <div class="field">
+      <label>Designation <span class="req">*</span></label>
+      <input type="text" data-bind-firm="contact.designation" value="${escapeHtml(ct.designation)}" placeholder="e.g. Sales Director, Partner, Manager">
+      ${errFirm("contact.designation")}
+    </div>
+    <div class="field">
+      <label>Mobile Number <span class="req">*</span></label>
+      <input type="tel" maxlength="10" data-bind-firm="contact.mobile" value="${escapeHtml(ct.mobile)}" placeholder="10-digit mobile number">
+      ${errFirm("contact.mobile")}
+    </div>
+    <div class="field">
+      <label>Alternate Mobile <span class="opt">(optional)</span></label>
+      <input type="tel" maxlength="10" data-bind-firm="contact.altMobile" value="${escapeHtml(ct.altMobile)}">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Email Address <span class="req">*</span></label>
+    <input type="email" data-bind-firm="contact.email" value="${escapeHtml(ct.email)}" placeholder="e.g. contact@yourcompany.com">
+    ${errFirm("contact.email")}
+  </div>
+
+  <div class="subblock">
+    <div style="font-weight:600;font-size:0.86rem;margin-bottom:10px;color:var(--navy);">Accounts / Finance Contact <span class="opt">(optional)</span></div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Accounts Person Name</label>
+        <input type="text" data-bind-firm="contact.accPersonName" value="${escapeHtml(ct.accPersonName)}">
+      </div>
+      <div class="field">
+        <label>Accounts Mobile Number</label>
+        <input type="tel" maxlength="10" data-bind-firm="contact.accMobile" value="${escapeHtml(ct.accMobile)}">
+      </div>
+      <div class="field" style="grid-column:1/-1;">
+        <label>Accounts Email</label>
+        <input type="email" data-bind-firm="contact.accEmail" value="${escapeHtml(ct.accEmail)}">
+      </div>
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-outline" data-action="firm-back">&larr; Back</button>
+    <button class="btn btn-gold" data-action="firm-next">Continue to Bank Details &rarr;</button>
+  </div>`;
+    }
+
+    // Firm Step 3: Bank Details (Only Bank Name - No Branch Name)
+    function stepFirmBank() {
+      const b = firmDraft.bank;
+      return `
+  <div class="section-title">Bank Details</div>
+  <div class="section-sub">Section 3 of 8 — Bank account details for invoice settlements and fund transfers. (Only Bank Name is required; Branch Name is not needed).</div>
+
+  <div class="field-grid">
+    <div class="field">
+      <label>Account Holder Name <span class="req">*</span></label>
+      <input type="text" data-bind-firm="bank.holderName" value="${escapeHtml(b.holderName)}" placeholder="As per bank passbook / cheque">
+      ${errFirm("bank.holderName")}
+    </div>
+    <div class="field">
+      <label>IFSC Code <span class="req">*</span></label>
+      <div class="inline-verify">
+        <input type="text" maxlength="11" style="text-transform:uppercase;font-weight:600;" data-bind-firm="bank.ifsc" value="${escapeHtml(b.ifsc)}" placeholder="e.g. HDFC0000123">
+        <button class="btn btn-outline btn-sm" data-action="fetch-firm-ifsc">Fetch Bank Name</button>
+      </div>
+      ${errFirm("bank.ifsc")}
+    </div>
+    <div class="field">
+      <label>Bank Name <span class="req">*</span></label>
+      <input type="text" data-bind-firm="bank.bankName" value="${escapeHtml(b.bankName)}" placeholder="e.g. HDFC Bank, State Bank of India">
+      ${errFirm("bank.bankName")}
+    </div>
+    <div class="field">
+      <label>Account Number <span class="req">*</span></label>
+      <input type="text" data-bind-firm="bank.accNumber" value="${escapeHtml(b.accNumber)}">
+      ${errFirm("bank.accNumber")}
+    </div>
+    <div class="field" style="grid-column:1/-1;">
+      <label>Re-enter Account Number <span class="req">*</span></label>
+      <input type="text" data-bind-firm="bank.accNumberConfirm" value="${escapeHtml(b.accNumberConfirm)}">
+      ${errFirm("bank.accNumberConfirm")}
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-outline" data-action="firm-back">&larr; Back</button>
+    <button class="btn btn-gold" data-action="firm-next">Continue to Documents &rarr;</button>
+  </div>`;
+    }
+
+    // Firm Step 4: Documents (Mandatory 4 + Optional MSME Certificate)
+    function stepFirmDocuments() {
+      function docTile(d, isMandatory) {
+        const file = firmDraft.documents[d.key];
+        return `
+      <div class="doc-item">
+        <div class="doc-title">
+          <span>${d.label} ${isMandatory ? '<span class="req">*</span>' : '<span class="opt">(Optional)</span>'}</span>
+          ${file ? `<span class="badge badge-success">&#10003; Attached</span>` : ''}
+        </div>
+        ${file ? `
+          <div class="doc-file-name">📄 ${escapeHtml(file.name)} (${fmtBytes(file.size)}) <span style="display:inline-block;margin-left:6px;font-size:0.75rem;color:var(--success);font-weight:600;">✓ Attached &amp; Verified</span></div>
+          <div style="margin-top:10px;">
+            <button class="btn btn-outline btn-sm" data-action="remove-firm-doc" data-key="${d.key}">Remove File</button>
+          </div>
+        ` : `
+          <label class="doc-upload-btn">
+            Click to upload (PDF, JPG, PNG · max 10MB)
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png" data-upload-firm-doc="${d.key}" style="display:none;">
+          </label>
+        `}
+        ${errFirm("documents." + d.key)}
+      </div>
+    `;
+      }
+
+      return `
+  <div class="section-title">Compliance Document Upload</div>
+  <div class="section-sub">Section 4 of 8 — Upload your business compliance documents.</div>
+
+  <div style="font-weight:600;font-size:0.86rem;margin-bottom:12px;color:var(--navy);">Mandatory Compliance Files</div>
+  <div class="doc-grid">
+    ${MANDATORY_DOCS.map(d => docTile(d, true)).join("")}
+  </div>
+
+  <div style="font-weight:600;font-size:0.86rem;margin:24px 0 12px;color:var(--navy);">Optional Document</div>
+  <div class="doc-grid">
+    ${OPTIONAL_DOCS.map(d => docTile(d, false)).join("")}
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-outline" data-action="firm-back">&larr; Back</button>
+    <button class="btn btn-gold" data-action="firm-next">Continue to Billing &rarr;</button>
+  </div>`;
+    }
+
+    // Firm Step 5: Billing Preferences
+    function stepFirmBilling() {
+      const bl = firmDraft.billing;
+      return `
+  <div class="section-title">Billing Preferences</div>
+  <div class="section-sub">Section 5 of 8 — Configure how invoices will be raised for Devka Beach Resort.</div>
+
+  <div class="field">
+    <label>Do you require GST on invoices? <span class="req">*</span></label>
+    <div class="radio-row">
+      <label class="radio-opt"><input type="radio" name="gstOnInvoice" value="yes" ${bl.gstOnInvoice === 'yes' ? 'checked' : ''} data-radio-firm="billing.gstOnInvoice"> Yes</label>
+      <label class="radio-opt"><input type="radio" name="gstOnInvoice" value="no" ${bl.gstOnInvoice === 'no' ? 'checked' : ''} data-radio-firm="billing.gstOnInvoice"> No</label>
+    </div>
+  </div>
+
+  <div class="field" style="margin-top:20px;">
+    <label>Require separate GST invoice for the liquor? <span class="req">*</span></label>
+    <div class="radio-row">
+      <label class="radio-opt"><input type="radio" name="liquorGstRequired" value="yes" ${bl.liquorGstRequired === 'yes' ? 'checked' : ''} data-radio-firm="billing.liquorGstRequired"> Yes</label>
+      <label class="radio-opt"><input type="radio" name="liquorGstRequired" value="no" ${bl.liquorGstRequired === 'no' ? 'checked' : ''} data-radio-firm="billing.liquorGstRequired"> No</label>
+    </div>
+  </div>
+
+  ${bl.liquorGstRequired === 'yes' ? `
+  <div class="subblock" style="margin-top:0;border-color:var(--gold-soft);background:var(--gold-light);">
+    <div class="field" style="margin-bottom:0;">
+      <label>GST Number for Liquor Billing <span class="req">*</span></label>
+      <input type="text" maxlength="15"
+        style="text-transform:uppercase;font-weight:600;letter-spacing:1px;"
+        data-bind-firm="billing.liquorGstNumber"
+        value="${escapeHtml(bl.liquorGstNumber || '')}"
+        placeholder="e.g. 30AABCU9603R1ZW">
+      <div class="hint">Enter the 15-character GSTIN that should appear on separate liquor invoices.</div>
+      ${errFirm('billing.liquorGstNumber')}
+    </div>
+  </div>` : ''}
+
+  <div class="field" style="margin-top:20px;">
+    <label>Do you want the liquor bill to be included in the regular bill? <span class="req">*</span></label>
+    <div class="radio-row">
+      <label class="radio-opt"><input type="radio" name="liquorBillGst" value="yes" ${bl.liquorBillGst === 'yes' ? 'checked' : ''} data-radio-firm="billing.liquorBillGst"> Yes</label>
+      <label class="radio-opt"><input type="radio" name="liquorBillGst" value="no" ${bl.liquorBillGst === 'no' ? 'checked' : ''} data-radio-firm="billing.liquorBillGst"> No</label>
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-outline" data-action="firm-back">&larr; Back</button>
+    <button class="btn btn-gold" data-action="firm-next">Continue to Payment Terms &rarr;</button>
+  </div>`;
+    }
+
+
+    // Firm Step 6: Payment
+    function stepFirmPayment() {
+      const p = firmDraft.payment;
+      const methods = ["RTGS / NEFT", "Bank Transfer", "IMPS", "Cheque"];
+      const periods = ["Immediate", "7 Days", "15 Days", "30 Days", "45 Days"];
+      return `
+  <div class="section-title">Payment Terms</div>
+  <div class="section-sub">Section 6 of 7 — Choose your preferred payment method and standard credit period.</div>
+
+  <div class="field">
+    <label>Preferred Payment Mode <span class="req">*</span></label>
+    <div class="radio-row">
+      ${methods.map(m => `
+        <label class="radio-opt"><input type="radio" name="payMode" value="${m}" ${p.method === m ? 'checked' : ''} data-radio-firm="payment.method"> ${m}</label>
+      `).join("")}
+    </div>
+  </div>
+
+  <div class="field" style="margin-top:20px;">
+    <label>Agreed Credit Period <span class="req">*</span></label>
+    <div class="radio-row">
+      ${periods.map(cp => `
+        <label class="radio-opt"><input type="radio" name="creditPer" value="${cp}" ${p.creditPeriod === cp ? 'checked' : ''} data-radio-firm="payment.creditPeriod"> ${cp}</label>
+      `).join("")}
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-outline" data-action="firm-back">&larr; Back</button>
+    <button class="btn btn-gold" data-action="firm-next">Continue to Declaration &rarr;</button>
+  </div>`;
+    }
+
+    // Firm Step 7: Declaration & Submit
+    function stepFirmDeclaration() {
+      return `
+  <div class="section-title">Declaration &amp; Submit</div>
+  <div class="section-sub">Section 7 of 7 — Review terms and submit your registration directly. No OTP required.</div>
+
+  <div class="declaration-box">
+    "I hereby declare that all information provided in this registration form is true, correct, and complete. I confirm that Devka Beach Resort reserves the right to verify all submitted documents and details."
+  </div>
+  <label class="accept-row" style="margin-bottom:8px;cursor:pointer;">
+    <input type="checkbox" data-check-firm="declarationAccepted" ${firmDraft.declarationAccepted ? 'checked' : ''}>
+    <span>I confirm and accept the declaration above. <span class="req">*</span></span>
+  </label>
+  ${errFirm("declarationAccepted")}
+
+  <div class="declaration-box" style="margin-top:18px;">
+    "I have read and agree to the Vendor Terms &amp; Conditions and Resort Procurement Policies."
+  </div>
+  <label class="accept-row" style="cursor:pointer;">
+    <input type="checkbox" data-check-firm="termsAccepted" ${firmDraft.termsAccepted ? 'checked' : ''}>
+    <span>I agree to the Terms &amp; Conditions. <span class="req">*</span></span>
+  </label>
+  ${errFirm("termsAccepted")}
+
+  <div class="wizard-footer" style="margin-top:26px;">
+    <button class="btn btn-outline" data-action="firm-back">&larr; Back</button>
+    <button class="btn btn-gold" id="btn-submit-firm" data-action="submit-firm">
+      Submit Company Registration &rarr;
+    </button>
+  </div>`;
+    }
+
+    function errFirm(path) {
+      const msg = firmDraft.errors[path];
+      return msg ? `<div class="err">${escapeHtml(msg)}</div>` : '';
+    }
+
+    /* ---------------- GUEST VENDOR REGISTRATION ---------------- */
+    function renderGuestForm() {
+      const g = guestDraft;
+      const photoDoc = g.documents['guest_photo'];
+      const aadhaarDoc = g.documents['aadhaar_doc'];
+
+      return `
+  <div class="shell shell-narrow">
+    <div class="card card-pad">
+      <div style="margin-bottom:24px;">
+        <span class="path-badge badge-guest" style="margin-bottom:8px;">Streamlined Individual Registration</span>
+        <h2 style="font-size:1.6rem;margin-bottom:4px;">Guest Vendor Registration</h2>
+        <div style="color:var(--muted);font-size:0.88rem;">
+          For individual performers, freelancers, solo consultants, and guest service providers.
+          No company information or GST required. Normal direct submission without OTP.
+        </div>
+      </div>
+
+      <!-- Basic Personal Info -->
+      <div style="font-weight:600;font-size:0.95rem;color:var(--navy);border-bottom:1px solid var(--border-light);padding-bottom:6px;margin-bottom:16px;">
+        1. Personal Information
+      </div>
+      <div class="field">
+        <label>Full Name of Guest / Vendor <span class="req">*</span></label>
+        <input type="text" data-bind-guest="fullName" value="${escapeHtml(g.fullName)}" placeholder="e.g. Full Legal Name">
+        ${errGuest("fullName")}
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Mobile Number <span class="req">*</span></label>
+          <input type="tel" maxlength="10" data-bind-guest="mobile" value="${escapeHtml(g.mobile)}" placeholder="10-digit mobile number">
+          ${errGuest("mobile")}
+        </div>
+        <div class="field">
+          <label>Email Address <span class="req">*</span></label>
+          <input type="email" data-bind-guest="email" value="${escapeHtml(g.email)}" placeholder="e.g. guest@example.com">
+          ${errGuest("email")}
+        </div>
+      </div>
+
+      <!-- Residential Address -->
+      <div style="font-weight:600;font-size:0.95rem;color:var(--navy);border-bottom:1px solid var(--border-light);padding-bottom:6px;margin:22px 0 16px;">
+        2. Residential Address
+      </div>
+      <div class="field">
+        <label>Address <span class="req">*</span></label>
+        <textarea rows="2" data-bind-guest="address" placeholder="Flat/House No, Building, Street, Area">${escapeHtml(g.address)}</textarea>
+        ${errGuest("address")}
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>City <span class="req">*</span></label>
+          <input type="text" data-bind-guest="city" value="${escapeHtml(g.city)}" placeholder="e.g. Daman / Surat">
+          ${errGuest("city")}
+        </div>
+        <div class="field">
+          <label>State <span class="req">*</span></label>
+          <input type="text" data-bind-guest="state" value="${escapeHtml(g.state)}" placeholder="e.g. Daman & Diu / Gujarat">
+          ${errGuest("state")}
+        </div>
+        <div class="field">
+          <label>Pincode <span class="req">*</span></label>
+          <input type="text" maxlength="6" data-bind-guest="pincode" value="${escapeHtml(g.pincode)}" placeholder="6-digit PIN">
+          ${errGuest("pincode")}
+        </div>
+        <div class="field">
+          <label>Role / Service Offered <span class="req">*</span></label>
+          <input type="text" data-bind-guest="serviceType" value="${escapeHtml(g.serviceType)}" placeholder="e.g. Musician, DJ, Event Host, Solo Contractor">
+          ${errGuest("serviceType")}
+        </div>
+      </div>
+
+      <!-- Aadhaar & Photo (No verification API needed - just number + file uploads) -->
+      <div style="font-weight:600;font-size:0.95rem;color:var(--navy);border-bottom:1px solid var(--border-light);padding-bottom:6px;margin:22px 0 16px;">
+        3. Identity Details (Aadhaar &amp; Photo)
+      </div>
+
+      <div class="field">
+        <label>Aadhaar Card Number <span class="req">*</span></label>
+        <input type="text" maxlength="14" data-bind-guest="aadhaar" value="${escapeHtml(g.aadhaar)}" placeholder="e.g. 5482 9104 2315">
+        <div class="hint">12-digit Aadhaar number. Verification API is not required.</div>
+        ${errGuest("aadhaar")}
+      </div>
+
+      <div class="field-grid" style="margin-top:14px;">
+        <!-- Photo upload -->
+        <div class="doc-item">
+          <div class="doc-title">
+            <span>Guest Passport Photo <span class="req">*</span></span>
+            ${photoDoc ? `<span class="badge badge-success">&#10003; Attached</span>` : ''}
+          </div>
+          <div class="photo-preview-box">
+            ${photoDoc && (photoDoc.url || photoDoc.data) ? `
+              <img src="${photoDoc.url || photoDoc.data}" alt="Guest Photo">
+            ` : `
+              <span style="font-size:2rem;color:var(--muted);">👤</span>
+            `}
+          </div>
+          ${photoDoc ? `
+            <div class="doc-file-name" style="margin-top:8px;">${escapeHtml(photoDoc.name)}</div>
+            <button class="btn btn-outline btn-sm" style="margin-top:6px;" data-action="remove-guest-doc" data-key="guest_photo">Change Photo</button>
+          ` : `
+            <label class="doc-upload-btn" style="margin-top:8px;">
+              Upload Photo (JPG/PNG)
+              <input type="file" accept="image/*" data-upload-guest-doc="guest_photo" style="display:none;">
+            </label>
+          `}
+          ${errGuest("guest_photo")}
+        </div>
+
+        <!-- Aadhaar Card file upload -->
+        <div class="doc-item">
+          <div class="doc-title">
+            <span>Aadhaar Card File / Scan <span class="req">*</span></span>
+            ${aadhaarDoc ? `<span class="badge badge-success">&#10003; Attached</span>` : ''}
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:8px;">
+            Upload front/back of Aadhaar card as PDF, JPG, or PNG.
+          </div>
+          ${aadhaarDoc ? `
+            <div class="doc-file-name" style="margin-top:14px;">📄 ${escapeHtml(aadhaarDoc.name)} (${fmtBytes(aadhaarDoc.size)})</div>
+            <button class="btn btn-outline btn-sm" style="margin-top:10px;" data-action="remove-guest-doc" data-key="aadhaar_doc">Remove File</button>
+          ` : `
+            <label class="doc-upload-btn" style="margin-top:20px;">
+              Upload Aadhaar Card (PDF/Image)
+              <input type="file" accept=".pdf,image/*" data-upload-guest-doc="aadhaar_doc" style="display:none;">
+            </label>
+          `}
+          ${errGuest("aadhaar_doc")}
+        </div>
+      </div>
+
+      <!-- Optional Bank Details for Payment -->
+      <div style="font-weight:600;font-size:0.95rem;color:var(--navy);border-bottom:1px solid var(--border-light);padding-bottom:6px;margin:26px 0 16px;">
+        4. Payment Details <span class="opt" style="font-size:0.78rem;font-weight:400;color:var(--muted);">(Optional — for bank payout)</span>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Account Holder Name</label>
+          <input type="text" data-bind-guest="bank.holderName" value="${escapeHtml(g.bank.holderName)}" placeholder="Name as per bank">
+        </div>
+        <div class="field">
+          <label>Bank Name</label>
+          <input type="text" data-bind-guest="bank.bankName" value="${escapeHtml(g.bank.bankName)}" placeholder="e.g. SBI, HDFC">
+        </div>
+        <div class="field">
+          <label>Account Number</label>
+          <input type="text" data-bind-guest="bank.accNumber" value="${escapeHtml(g.bank.accNumber)}">
+        </div>
+        <div class="field">
+          <label>IFSC Code</label>
+          <input type="text" maxlength="11" style="text-transform:uppercase;" data-bind-guest="bank.ifsc" value="${escapeHtml(g.bank.ifsc)}" placeholder="e.g. SBIN0001234">
+        </div>
+      </div>
+
+      <!-- Declaration & Submit -->
+      <div style="margin-top:20px;">
+        <label class="accept-row">
+          <input type="checkbox" data-check-guest="declarationAccepted" ${g.declarationAccepted ? 'checked' : ''}>
+          <span>I declare that all personal and identity details provided above are authentic and accurate.</span>
+        </label>
+        ${errGuest("declarationAccepted")}
+      </div>
+
+      <div class="wizard-footer">
+        <button class="btn btn-outline" data-action="nav-home">&larr; Return Home</button>
+        <button class="btn btn-gold" data-action="submit-guest">Submit Guest Registration &rarr;</button>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function errGuest(field) {
+      const msg = guestDraft.errors[field];
+      return msg ? `<div class="err">${escapeHtml(msg)}</div>` : '';
+    }
+
+    /* ---------------- Confirmation Page ---------------- */
+    function renderConfirmation() {
+      const v = lastSubmission;
+      if (!v) return `<div class="shell"><div style="text-align:center;padding:40px;">No registration submission found.</div></div>`;
+      const isGuest = v.type === "guest";
+      const firmName = isGuest ? (v.guest?.fullName || "Guest Vendor") : (v.company?.legalName || v.company?.companyName || "Vendor");
+
+      return `
+  <div class="shell shell-narrow">
+    <div class="card card-pad confirm-wrap">
+      <div class="confirm-logo-badge">
+        <img src="LOGO.png" alt="Devka Beach Resort" style="width:100%;height:100%;object-fit:contain;" />
+      </div>
+      <div class="confirm-icon">&#10003;</div>
+      <h2>Registration Successfully Submitted!</h2>
+      <p style="font-size:1.25rem;color:var(--navy);font-weight:700;margin-top:10px;">
+        Thank you, ${escapeHtml(firmName)}!
+      </p>
+      <p style="color:var(--muted);font-size:0.92rem;max-width:520px;margin:8px auto 0;">
+        Your vendor registration has been successfully recorded in our system. You can download a verified PDF copy of all information submitted as your official proof.
+      </p>
+
+      <div class="vendor-id-box">${v.id}</div>
+      <p style="color:var(--muted);font-size:0.86rem;max-width:440px;margin:0 auto 24px;">
+        Please quote this vendor reference number for all future communications with Devka Beach Resort.
+      </p>
+
+      <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;">
+        <button class="btn btn-gold" data-action="download-registration-pdf" style="padding:12px 24px;font-size:0.95rem;font-weight:600;">
+          📥 Download Registration Form (PDF)
+        </button>
+        <button class="btn btn-outline" data-action="nav-home" style="padding:12px 20px;">
+          Return to Home
+        </button>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function syncDomInputs() {
+      document.querySelectorAll("[data-bind-firm]").forEach(el => {
+        setDeepValue(firmDraft, el.getAttribute("data-bind-firm"), el.value.trim());
+      });
+      document.querySelectorAll("[data-bind-guest]").forEach(el => {
+        setDeepValue(guestDraft, el.getAttribute("data-bind-guest"), el.value.trim());
+      });
+    }
+
+    /* ---------------- Form Validation Logic ---------------- */
+    function validateFirmStep(step, doRender = true) {
+      syncDomInputs();
+      const e = {};
+      const c = firmDraft.company;
+
+      if (step === 1) {
+        if (!c.legalName || !c.legalName.trim()) e["company.legalName"] = "Legal Company Registered Name is required";
+
+        if (!c.gst || !c.gst.trim()) e["company.gst"] = "GST Number is required";
+        else if (!RE_GST.test(c.gst.trim().toUpperCase())) e["company.gst"] = "Invalid GSTIN format (15 characters expected, e.g. 24AAACG1234F1Z5)";
+
+        if (!c.pan || !c.pan.trim()) e["company.pan"] = "PAN Card Number is required";
+        else if (!RE_PAN.test(c.pan.trim().toUpperCase())) e["company.pan"] = "Invalid PAN format (10 characters expected, e.g. AAACG1234F)";
+
+        if (!c.address || !c.address.trim()) e["company.address"] = "Company Registered Address is required";
+        if (!c.city || !c.city.trim()) e["company.city"] = "City is required";
+        if (!c.state || !c.state.trim()) e["company.state"] = "State is required";
+        if (!RE_PIN.test(c.pincode.trim())) e["company.pincode"] = "Enter a valid 6-digit pincode";
+      }
+      else if (step === 2) {
+        const ct = firmDraft.contact;
+        if (!ct.personName || !ct.personName.trim()) e["contact.personName"] = "Contact Person Name is required";
+        if (!ct.designation || !ct.designation.trim()) e["contact.designation"] = "Designation is required";
+        if (!RE_MOBILE.test(ct.mobile.trim())) e["contact.mobile"] = "Enter a valid 10-digit mobile number";
+        if (!RE_EMAIL.test(ct.email.trim())) e["contact.email"] = "Enter a valid email address";
+      }
+      else if (step === 3) {
+        const b = firmDraft.bank;
+        if (!b.holderName || !b.holderName.trim()) e["bank.holderName"] = "Account Holder Name is required";
+        if (!RE_IFSC.test(b.ifsc.trim().toUpperCase())) e["bank.ifsc"] = "Enter a valid 11-character IFSC code";
+        if (!b.bankName || !b.bankName.trim()) e["bank.bankName"] = "Bank Name is required";
+        if (!b.accNumber || !b.accNumber.trim()) e["bank.accNumber"] = "Account Number is required";
+        if (b.accNumber.trim() !== b.accNumberConfirm.trim()) e["bank.accNumberConfirm"] = "Account numbers do not match";
+      }
+      else if (step === 4) {
+        let missing = 0;
+        for (const d of MANDATORY_DOCS) {
+          if (!firmDraft.documents[d.key]) {
+            e["documents." + d.key] = `Please attach mandatory ${d.label}`;
+            missing++;
+          }
+        }
+        if (missing > 0) {
+          if (doRender) pushToast(`Please attach all mandatory compliance documents.`, "error");
+          firmDraft.errors = e;
+          if (doRender) render();
+          return false;
+        }
+      }
+      else if (step === 5) {
+        if (!firmDraft.billing.gstOnInvoice) { if (doRender) pushToast("Please answer: Do you require GST on invoices?", "error"); return false; }
+        if (!firmDraft.billing.liquorGstRequired) { if (doRender) pushToast("Please answer: Require separate GST invoice for the liquor?", "error"); return false; }
+        if (firmDraft.billing.liquorGstRequired === 'yes') {
+          const lgst = (firmDraft.billing.liquorGstNumber || '').trim().toUpperCase();
+          if (!lgst || !RE_GST.test(lgst)) {
+            const e = {};
+            e['billing.liquorGstNumber'] = "Please enter a valid 15-character GSTIN for liquor billing.";
+            firmDraft.errors = e;
+            if (doRender) { render(); pushToast("Please enter a valid GST number for liquor billing.", "error"); }
+            return false;
+          }
+          firmDraft.billing.liquorGstNumber = lgst;
+        }
+        if (!firmDraft.billing.liquorBillGst) { if (doRender) pushToast("Please answer: Do you want the liquor bill to be included in the regular bill?", "error"); return false; }
+      }
+      else if (step === 6) {
+        if (!firmDraft.payment.method || !firmDraft.payment.creditPeriod) {
+          if (doRender) pushToast("Please select your preferred payment mode and credit period.", "error");
+          return false;
+        }
+      }
+
+      firmDraft.errors = e;
+      if (doRender) render();
+      return Object.keys(e).length === 0;
+    }
+
+    function findFirstIncompleteFirmStep() {
+      syncDomInputs();
+      for (let s = 1; s <= 6; s++) {
+        if (!validateFirmStep(s, false)) {
+          return s;
+        }
+      }
+      return 0;
+    }
+
+    function validateGuestForm() {
+      syncDomInputs();
+      const e = {};
+      const g = guestDraft;
+
+      if (!g.fullName.trim()) e["fullName"] = "Full Name is required";
+      if (!RE_MOBILE.test(g.mobile)) e["mobile"] = "Enter a valid 10-digit mobile number";
+      if (!RE_EMAIL.test(g.email)) e["email"] = "Enter a valid email address";
+      if (!g.address.trim()) e["address"] = "Residential Address is required";
+      if (!g.city.trim()) e["city"] = "City is required";
+      if (!g.state.trim()) e["state"] = "State is required";
+      if (!RE_PIN.test(g.pincode)) e["pincode"] = "Enter a valid 6-digit pincode";
+      if (!g.serviceType.trim()) e["serviceType"] = "Role / Service type is required";
+
+      const cleanAadhaar = g.aadhaar.replace(/\s+/g, '');
+      if (!cleanAadhaar || cleanAadhaar.length !== 12 || !/^\d{12}$/.test(cleanAadhaar)) {
+        e["aadhaar"] = "Enter a valid 12-digit Aadhaar Number";
+      }
+
+      if (!g.documents['guest_photo']) e["guest_photo"] = "Guest photo upload is required";
+      if (!g.documents['aadhaar_doc']) e["aadhaar_doc"] = "Aadhaar card file upload is required";
+      if (!g.declarationAccepted) e["declarationAccepted"] = "Please confirm the declaration to proceed";
+
+      guestDraft.errors = e;
+      render();
+      return Object.keys(e).length === 0;
+    }
+
+    /* ---------------- Event Listeners & Actions ---------------- */
+    function attachEvents() {
+      const app = document.getElementById("app");
+
+      // Firm input bindings
+      app.querySelectorAll("[data-bind-firm]").forEach(el => {
+        el.addEventListener("input", (e) => {
+          setDeepValue(firmDraft, el.getAttribute("data-bind-firm"), e.target.value);
+        });
+      });
+
+      // Firm radio bindings
+      app.querySelectorAll("[data-radio-firm]").forEach(el => {
+        el.addEventListener("change", (e) => {
+          setDeepValue(firmDraft, el.getAttribute("data-radio-firm"), e.target.value);
+          render();
+        });
+      });
+
+      // Firm checkbox bindings
+      app.querySelectorAll("[data-check-firm]").forEach(el => {
+        el.addEventListener("change", (e) => {
+          const field = el.getAttribute("data-check-firm");
+          firmDraft[field] = e.target.checked;
+          if (firmDraft.errors && firmDraft.errors[field]) {
+            delete firmDraft.errors[field];
+          }
+        });
+      });
+
+      // Firm step clicks
+      app.querySelectorAll("[data-firm-step]").forEach(el => {
+        el.addEventListener("click", () => {
+          const targetStep = parseInt(el.getAttribute("data-firm-step"));
+          if (targetStep <= firmDraft.step) {
+            firmDraft.step = targetStep;
+            render();
+          }
+        });
+      });
+
+      // Firm document upload
+      app.querySelectorAll("[data-upload-firm-doc]").forEach(el => {
+        el.addEventListener("change", async (e) => {
+          const key = el.getAttribute("data-upload-firm-doc");
+          const file = e.target.files[0];
+          if (!file) return;
+          if (file.size > 10 * 1024 * 1024) { pushToast("File exceeds 10MB limit.", "error"); return; }
+          pushToast(`Uploading ${file.name}...`, "neutral");
+          try {
+            if (window.DevkaCloud && typeof window.DevkaCloud.uploadDocument === "function") {
+              const uploaded = await window.DevkaCloud.uploadDocument(file, "firm_documents", key);
+              firmDraft.documents[key] = {
+                name: file.name,
+                size: file.size,
+                type: uploaded.type,
+                url: uploaded.url,
+                storagePath: uploaded.storagePath,
+                uploadedAt: Date.now()
+              };
+              pushToast(`${file.name} uploaded successfully.`, "success");
+              render();
+            } else {
+              readFileAsDataUrl(file, (dataUrl) => {
+                firmDraft.documents[key] = {
+                  name: file.name,
+                  size: file.size,
+                  type: file.type,
+                  data: dataUrl,
+                  uploadedAt: Date.now()
+                };
+                pushToast(`${file.name} attached.`, "success");
+                render();
+              });
+            }
+          } catch (err) {
+            console.warn("Cloud upload fallback:", err);
+            readFileAsDataUrl(file, (dataUrl) => {
+              firmDraft.documents[key] = {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: dataUrl,
+                uploadedAt: Date.now()
+              };
+              pushToast(`${file.name} attached.`, "success");
+              render();
+            });
+          }
+        });
+      });
+
+      // Guest input bindings
+      app.querySelectorAll("[data-bind-guest]").forEach(el => {
+        el.addEventListener("input", (e) => {
+          setDeepValue(guestDraft, el.getAttribute("data-bind-guest"), e.target.value);
+        });
+      });
+
+      // Guest checkbox
+      app.querySelectorAll("[data-check-guest]").forEach(el => {
+        el.addEventListener("change", (e) => {
+          const field = el.getAttribute("data-check-guest");
+          guestDraft[field] = e.target.checked;
+          if (guestDraft.errors && guestDraft.errors[field]) {
+            delete guestDraft.errors[field];
+          }
+        });
+      });
+
+      // Guest document upload
+      app.querySelectorAll("[data-upload-guest-doc]").forEach(el => {
+        el.addEventListener("change", async (e) => {
+          const key = el.getAttribute("data-upload-guest-doc");
+          const file = e.target.files[0];
+          if (!file) return;
+          if (file.size > 10 * 1024 * 1024) { pushToast("File exceeds 10MB limit.", "error"); return; }
+          pushToast(`Uploading ${file.name}...`, "neutral");
+          try {
+            if (window.DevkaCloud && typeof window.DevkaCloud.uploadDocument === "function") {
+              const uploaded = await window.DevkaCloud.uploadDocument(file, "guest_documents", key);
+              guestDraft.documents[key] = {
+                name: file.name,
+                size: file.size,
+                type: uploaded.type,
+                url: uploaded.url,
+                storagePath: uploaded.storagePath,
+                uploadedAt: Date.now()
+              };
+              pushToast(`${file.name} uploaded successfully.`, "success");
+              render();
+            } else {
+              readFileAsDataUrl(file, (dataUrl) => {
+                guestDraft.documents[key] = {
+                  name: file.name,
+                  size: file.size,
+                  type: file.type,
+                  data: dataUrl,
+                  uploadedAt: Date.now()
+                };
+                pushToast(`${file.name} uploaded successfully.`, "success");
+                render();
+              });
+            }
+          } catch (err) {
+            console.warn("Guest cloud upload fallback:", err);
+            readFileAsDataUrl(file, (dataUrl) => {
+              guestDraft.documents[key] = {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: dataUrl,
+                uploadedAt: Date.now()
+              };
+              pushToast(`${file.name} attached.`, "success");
+              render();
+            });
+          }
+        });
+      });
+
+      // General Action buttons
+      app.querySelectorAll("[data-action]").forEach(el => {
+        el.addEventListener("click", (e) => {
+          const action = el.getAttribute("data-action");
+          handleAppAction(action, el, e);
+        });
+      });
+    }
+
+    async function handleAppAction(action, el, ev) {
+      if (action === "nav-home") {
+        go("home");
+      }
+      else if (action === "start-firm") {
+        firmDraft = freshFirmDraft();
+        go("firm-register");
+      }
+      else if (action === "start-guest") {
+        guestDraft = freshGuestDraft();
+        go("guest-register");
+      }
+      else if (action === "firm-back") {
+        firmDraft.step = Math.max(1, firmDraft.step - 1);
+        window.scrollTo(0, 0);
+        render();
+      }
+      else if (action === "firm-next") {
+        syncDomInputs();
+        if (validateFirmStep(firmDraft.step)) {
+          firmDraft.step = Math.min(7, firmDraft.step + 1);
+          window.scrollTo(0, 0);
+          render();
+        }
+      }
+      else if (action === "fetch-firm-ifsc") {
+        syncDomInputs();
+        const ifsc = (firmDraft.bank.ifsc || "").trim().toUpperCase();
+        firmDraft.bank.ifsc = ifsc;
+        const code = ifsc.slice(0, 4);
+        if (IFSC_BANK_MAP[code]) {
+          firmDraft.bank.bankName = IFSC_BANK_MAP[code];
+          pushToast(`Bank identified: ${IFSC_BANK_MAP[code]}`, "success");
+        } else if (RE_IFSC.test(ifsc)) {
+          firmDraft.bank.bankName = "Scheduled Commercial Bank";
+          pushToast("Valid IFSC format accepted.", "success");
+        } else {
+          pushToast("Please enter a valid 11-digit IFSC code.", "error");
+        }
+        render();
+      }
+      else if (action === "remove-firm-doc") {
+        const key = el.getAttribute("data-key");
+        const doc = firmDraft.documents[key];
+        if (doc && doc.storagePath && window.DevkaCloud) {
+          window.DevkaCloud.deleteDocument(doc.storagePath).catch(() => { });
+        }
+        delete firmDraft.documents[key];
+        render();
+      }
+      else if (action === "remove-guest-doc") {
+        const key = el.getAttribute("data-key");
+        const doc = guestDraft.documents[key];
+        if (doc && doc.storagePath && window.DevkaCloud) {
+          window.DevkaCloud.deleteDocument(doc.storagePath).catch(() => { });
+        }
+        delete guestDraft.documents[key];
+        render();
+      }
+      else if (action === "download-registration-pdf") {
+        if (lastSubmission) {
+          window.downloadVendorPdf(lastSubmission);
+        }
+      }
+      else if (action === "submit-firm") {
+        syncDomInputs();
+
+        // 1. Verify all previous steps are complete
+        const firstInvalid = findFirstIncompleteFirmStep();
+        if (firstInvalid > 0) {
+          firmDraft.step = firstInvalid;
+          window.scrollTo(0, 0);
+          validateFirmStep(firstInvalid, true);
+          pushToast(`Please complete the required information in Section ${firstInvalid}.`, "error");
+          return;
+        }
+
+        // 2. Verify Step 8 declarations
+        const declErrors = {};
+        if (!firmDraft.declarationAccepted) {
+          declErrors["declarationAccepted"] = "Please confirm the declaration to proceed.";
+        }
+        if (!firmDraft.termsAccepted) {
+          declErrors["termsAccepted"] = "Please agree to the Terms & Conditions to proceed.";
+        }
+        if (Object.keys(declErrors).length > 0) {
+          firmDraft.errors = declErrors;
+          render();
+          pushToast("Please accept the declaration and terms to submit.", "error");
+          return;
+        }
+
+        // 3. Button feedback
+        const btn = document.getElementById("btn-submit-firm") || el;
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = `<span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> Submitting Registration...`;
+        }
+
+        try {
+          const nextId = await window.VendorDB.generateNextId("firm");
+          const vendorRecord = {
+            id: nextId,
+            type: "firm",
+            status: "Submitted",
+            submittedAt: Date.now(),
+            company: {
+              ...firmDraft.company,
+              companyName: firmDraft.company.legalName
+            },
+            contact: firmDraft.contact,
+            bank: firmDraft.bank,
+            documents: firmDraft.documents,
+            billing: firmDraft.billing,
+            payment: firmDraft.payment,
+            adminNotes: ""
+          };
+
+          await window.VendorDB.saveVendor(vendorRecord);
+          pushToast("Company registration submitted successfully!", "success");
+          go("confirmation", vendorRecord);
+        } catch (err) {
+          console.error("Company registration submission error:", err);
+          pushToast(`Submission error: ${err.message || "Failed to save registration"}`, "error");
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `Submit Company Registration &rarr;`;
+          }
+        }
+      }
+      else if (action === "submit-guest") {
+        syncDomInputs();
+        if (!validateGuestForm()) return;
+
+        const btn = el;
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = `<span style="display:inline-block;animation:spin 1s linear infinite;">⏳</span> Submitting Registration...`;
+        }
+
+        try {
+          const nextId = await window.VendorDB.generateNextId("guest");
+          const vendorRecord = {
+            id: nextId,
+            type: "guest",
+            status: "Submitted",
+            submittedAt: Date.now(),
+            guest: {
+              fullName: guestDraft.fullName,
+              mobile: guestDraft.mobile,
+              email: guestDraft.email,
+              address: guestDraft.address,
+              city: guestDraft.city,
+              state: guestDraft.state,
+              pincode: guestDraft.pincode,
+              aadhaar: guestDraft.aadhaar,
+              serviceType: guestDraft.serviceType,
+              notes: guestDraft.notes
+            },
+            bank: guestDraft.bank,
+            documents: guestDraft.documents,
+            adminNotes: ""
+          };
+
+          await window.VendorDB.saveVendor(vendorRecord);
+          pushToast("Guest registration submitted successfully!", "success");
+          go("confirmation", vendorRecord);
+        } catch (err) {
+          console.error("Guest registration submission error:", err);
+          pushToast(`Submission error: ${err.message || "Failed to save registration"}`, "error");
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `Submit Guest Registration &rarr;`;
+          }
+        }
+      }
+    }
+
+    /* ---------------- Helper Utilities ---------------- */
+    function setDeepValue(obj, path, val) {
+      const parts = path.split(".");
+      let cur = obj;
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (!cur[parts[i]]) cur[parts[i]] = {};
+        cur = cur[parts[i]];
+      }
+      cur[parts[parts.length - 1]] = val;
+    }
+
+    function readFileAsDataUrl(file, callback) {
+      const reader = new FileReader();
+      reader.onload = (e) => callback(e.target.result);
+      reader.readAsDataURL(file);
+    }
+
+    function escapeHtml(s) {
+      return (s || "").toString().replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function fmtBytes(b) {
+      if (!b) return "0 B";
+      if (b < 1024) return b + " B";
+      if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+      return (b / (1024 * 1024)).toFixed(2) + " MB";
+    }
+
+    // Initial Boot
+    render();
+  </script>
+</body>
+
+</html>
