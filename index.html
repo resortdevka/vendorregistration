@@ -33,7 +33,7 @@
       --border: #E3DCC9;
       --border-light: #ECE7D8;
       --shadow: 0 10px 30px rgba(11, 31, 58, 0.08);
-      --shadow-lg: 0 18px 45px rgba(11, 31, 58, 0.12);
+      --shadow-lg: 0 18px px rgba(11, 31, 58, 0.12);
       --radius: 8px;
       --radius-sm: 4px;
     }
@@ -189,7 +189,7 @@
 
     .btn-ghost {
       background: transparent;
-      border-color: rgba(248, 245, 238, 0.4);
+      border-color: rgba(248, 2, 238, 0.4);
       color: var(--cream);
     }
 
@@ -1449,7 +1449,7 @@
     function stepFirmPayment() {
       const p = firmDraft.payment;
       const methods = ["RTGS / NEFT", "Bank Transfer", "IMPS", "Cheque"];
-      const periods = ["Immediate", "7 Days", "15 Days", "30 Days", "45 Days"];
+      const periods = ["Immediate", "7 Days", "15 Days"];
       return `
   <div class="section-title">Payment Terms</div>
   <div class="section-sub">Section 6 of 7 — Choose your preferred payment method and standard credit period.</div>
